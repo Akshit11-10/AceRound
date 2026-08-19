@@ -14,31 +14,7 @@ const DIFFICULTY_GUIDANCE = {
   hard: "Challenging, in-depth questions covering edge cases, system design trade-offs, and advanced practical scenarios, suitable for a senior candidate.",
 };
 
-function buildPrompt(role, count, { difficulty = "medium", targetCompany, resumeText } = {}) {
-  const difficultyLine = DIFFICULTY_GUIDANCE[difficulty] || DIFFICULTY_GUIDANCE.medium;
-
-  const companyBlock = targetCompany
-    ? `
-Company focus: "${targetCompany}"
-- Write these questions in the style and spirit of interviews commonly reported for "${targetCompany}" (topics, depth, and phrasing patterns candidates have publicly described from that company's interviews). Do not claim these are verbatim official questions — style-match only.
-- At the very end of EACH question's "question" text, append the company name in parentheses, e.g. "...? (${targetCompany})".`
-    : "";
-
-  const resumeBlock = resumeText
-    ? `
-Candidate background (resume/skills summary, use this to tailor question topics toward their actual experience where relevant, while still covering core "${role}" fundamentals):
-"""
-${resumeText.slice(0, 4000)}
-"""`
-    : "";
-
-  return `You are an expert technical interviewer. Generate exactly ${count} unique, high-quality multiple-choice interview questions for a candidate interviewing for the role: "${role}".
-
-Difficulty level: ${difficulty}. ${difficultyLine}
-${companyBlock}${resumeBlock}
-
-Rules:
-- Mix of conceptual and practical questions appropriate for the role and difficulty level above.
+const JSON_SHAPE_RULES = `Rules:
 - Each question must have exactly 4 options.
 - Exactly one option is correct.
 - Include a short (1-3 sentence) explanation of why the correct answer is right.
@@ -57,6 +33,52 @@ Rules:
 }
 
 "correctAnswer" is the zero-based index into "options" of the correct choice.`;
+
+/**
+ * Builds the generation prompt for one of three independent modes:
+ *  - "role"    : classic role + difficulty based questions.
+ *  - "company" : questions styled after a specific company's commonly
+ *                reported interview questions — no role needed.
+ *  - "resume"  : questions based strictly on the skills found in an
+ *                uploaded resume — no role needed.
+ */
+function buildPrompt({ mode = "role", role, count, difficulty = "medium", targetCompany, resumeText }) {
+  const difficultyLine = DIFFICULTY_GUIDANCE[difficulty] || DIFFICULTY_GUIDANCE.medium;
+
+  if (mode === "company") {
+    return `You are an expert technical interviewer with deep knowledge of "${targetCompany}"'s hiring process.
+
+Generate exactly ${count} unique multiple-choice interview questions in the style and spirit of questions commonly reported by candidates who interviewed at "${targetCompany}" (topics, depth, phrasing patterns, and typical focus areas for that company). Draw on publicly known patterns rather than claiming these are verbatim leaked questions.
+
+Difficulty level: ${difficulty}. ${difficultyLine}
+
+At the very end of EACH question's "question" text, append the company name in parentheses, e.g. "...? (${targetCompany})".
+
+${JSON_SHAPE_RULES}`;
+  }
+
+  if (mode === "resume") {
+    return `You are an expert technical interviewer. Below is a candidate's resume text.
+
+Step 1: Identify the candidate's technical skills — from an explicit "Skills" section if present, and also from technologies mentioned in their experience/projects.
+Step 2: Generate exactly ${count} unique multiple-choice interview questions testing ONLY those specific skills/technologies you identified — not generic questions unrelated to their actual background.
+
+Difficulty level: ${difficulty}. ${difficultyLine}
+
+Resume:
+"""
+${(resumeText || "").slice(0, 4000)}
+"""
+
+${JSON_SHAPE_RULES}`;
+  }
+
+  // Default: "role" mode
+  return `You are an expert technical interviewer. Generate exactly ${count} unique, high-quality multiple-choice interview questions for a candidate interviewing for the role: "${role}".
+
+Difficulty level: ${difficulty}. ${difficultyLine}
+
+${JSON_SHAPE_RULES}`;
 }
 
 /**
@@ -106,7 +128,7 @@ function normalizeQuestions(parsed, count) {
   return normalized.slice(0, count);
 }
 
-async function generateWithGemini(role, count, options) {
+async function generateWithGemini(params) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
   const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
@@ -124,7 +146,7 @@ async function generateWithGemini(role, count, options) {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: buildPrompt(role, count, options) }] }],
+          contents: [{ role: "user", parts: [{ text: buildPrompt(params) }] }],
           generationConfig: {
             temperature: 0.9,
             responseMimeType: "application/json",
@@ -148,7 +170,7 @@ async function generateWithGemini(role, count, options) {
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
       const parsed = extractJson(text);
-      return normalizeQuestions(parsed, count);
+      return normalizeQuestions(parsed, params.count);
     } catch (err) {
       lastErr = err;
       if (attempt >= maxAttempts) throw err;
@@ -160,7 +182,7 @@ async function generateWithGemini(role, count, options) {
   throw lastErr;
 }
 
-async function generateWithOpenAI(role, count, options) {
+async function generateWithOpenAI(params) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
   const model = process.env.OPENAI_MODEL || "gpt-5-mini";
@@ -180,7 +202,7 @@ async function generateWithOpenAI(role, count, options) {
         model,
         messages: [
           { role: "system", content: "You output only strict JSON. No prose, no markdown." },
-          { role: "user", content: buildPrompt(role, count, options) },
+          { role: "user", content: buildPrompt(params) },
         ],
         response_format: { type: "json_object" },
         temperature: 0.9,
@@ -195,7 +217,7 @@ async function generateWithOpenAI(role, count, options) {
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content || "";
     const parsed = extractJson(text);
-    return normalizeQuestions(parsed, count);
+    return normalizeQuestions(parsed, params.count);
   } finally {
     clearTimeout(timeout);
   }
@@ -204,13 +226,12 @@ async function generateWithOpenAI(role, count, options) {
 /**
  * Groq — free tier, no credit card, extremely fast (custom LPU hardware).
  * Uses an OpenAI-compatible chat-completions API, so the request shape
- * mirrors generateWithOpenAI() almost exactly, just pointed at Groq's host
- * and using an open-weight model (Llama 3.3 70B by default).
+ * mirrors generateWithOpenAI() almost exactly, just pointed at Groq's host.
  */
-async function generateWithGroq(role, count, options) {
+async function generateWithGroq(params) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error("GROQ_API_KEY is not set");
-  const model = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -227,7 +248,7 @@ async function generateWithGroq(role, count, options) {
         model,
         messages: [
           { role: "system", content: "You output only strict JSON. No prose, no markdown." },
-          { role: "user", content: buildPrompt(role, count, options) },
+          { role: "user", content: buildPrompt(params) },
         ],
         response_format: { type: "json_object" },
         temperature: 0.9,
@@ -242,43 +263,47 @@ async function generateWithGroq(role, count, options) {
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content || "";
     const parsed = extractJson(text);
-    return normalizeQuestions(parsed, count);
+    return normalizeQuestions(parsed, params.count);
   } finally {
     clearTimeout(timeout);
   }
 }
 
 /**
- * Generates `count` MCQ questions for `role`.
+ * Generates MCQ questions for one of three modes — see buildPrompt() above.
  * Tries the configured AI provider first; on any failure (missing key,
  * network error, malformed output) it transparently falls back to the
  * static local question bank so an interview can always start.
  *
- * `options`: { difficulty?: 'easy'|'medium'|'hard', targetCompany?: string, resumeText?: string }
- * These only affect AI-generated questions — the static fallback bank is
- * fixed content and ignores them.
+ * `params`: { mode: 'role'|'company'|'resume', role?, count, difficulty?, targetCompany?, resumeText? }
+ * The static fallback bank only has content for "role" mode (fixed content,
+ * keyed by role name) — company/resume mode always requires AI to work
+ * meaningfully, so if AI is unavailable in those modes we fall back to a
+ * generic role bank as a last resort rather than leaving the user stuck.
  *
  * Returns: { questions, source: 'ai' | 'static', provider: string|null }
  */
-async function generateQuestions(role, count = Number(process.env.DEFAULT_QUESTION_COUNT) || 20, options = {}) {
+async function generateQuestions(params) {
+  const { mode = "role", role, count = Number(process.env.DEFAULT_QUESTION_COUNT) || 20 } = params;
   const provider = (process.env.AI_PROVIDER || "none").toLowerCase();
   const supportedProviders = { gemini: generateWithGemini, openai: generateWithOpenAI, groq: generateWithGroq };
 
   if (supportedProviders[provider]) {
     try {
-      const questions = await supportedProviders[provider](role, count, options);
+      const questions = await supportedProviders[provider]({ ...params, mode, count });
       return { questions, source: "ai", provider };
     } catch (err) {
       console.warn(`[aiQuestionService] ${provider} generation failed, falling back to static bank: ${err.message}`);
     }
   }
 
-  const fallback = getFallbackQuestions(role);
+  // Static fallback only makes sense for "role" mode — company/resume mode
+  // has no equivalent static content, so fall back to a generic role bank.
+  const fallback = mode === "role" ? getFallbackQuestions(role) : null;
   if (fallback) {
     return { questions: fallback.slice(0, count), source: "static", provider: null };
   }
 
-  // Unknown role and AI unavailable/failed: use the generic bank as a last resort.
   const generic = getFallbackQuestions("Node.js Developer");
   return { questions: (generic || []).slice(0, count), source: "static", provider: null };
 }

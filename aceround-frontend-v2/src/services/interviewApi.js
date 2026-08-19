@@ -27,9 +27,9 @@ export const adminApi = {
 };
 
 export const interviewApi = {
-  // Starts a new interview: backend generates questions (AI or static fallback),
-  // stores the answer key server-side, and returns only question text + options.
-  start: (role, options = {}) => apiFetch("/interviews/start", { method: "POST", body: { role, ...options } }),
+  // Starts a new interview. `params` matches the backend's mode-based shape:
+  // { mode: 'role'|'company'|'resume', role?, count, difficulty?, targetCompany?, resumeText? }
+  start: (params) => apiFetch("/interviews/start", { method: "POST", body: params }),
 
   // Submits answers for scoring. Correct answers/explanations only come back now.
   submit: (interviewId, answers, timeSpent) =>

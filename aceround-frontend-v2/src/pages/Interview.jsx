@@ -58,7 +58,7 @@ function RoleCard({ role: roleName, isActive, onClick }) {
             {roleName}
           </h4>
           <p className={`text-xs mt-0.5 transition-colors duration-300 group-hover:text-slate-400 ${isActive ? 'text-blue-400/70' : 'text-slate-500'}`}>
-            Choose {roleName}
+            AI-generated · 15 min
           </p>
         </div>
       </div>
@@ -72,15 +72,26 @@ function RoleCard({ role: roleName, isActive, onClick }) {
   );
 }
 
-// Role selection + interview details screen
+const MODE_TABS = [
+  { value: 'role', label: 'Select Role' },
+  { value: 'company', label: 'Target Company' },
+  { value: 'resume', label: 'Upload Resume' },
+];
+
+// Mode selection + interview details screen
 function InterviewSetup({
+  mode, onSelectMode,
   roles, rolesLoading, selectedRole, onSelectRole, onStart, starting, startError,
   difficulty, onSelectDifficulty,
   questionCount, onSelectQuestionCount,
   targetCompany, onTargetCompanyChange,
   resumeFile, onResumeChange, resumeStatus, resumeError,
 }) {
-  const durationMinutes = Math.round(questionCount * 1.0 * 10) / 10;
+  const durationMinutes = Math.round(questionCount * 0.75 * 10) / 10;
+
+  const canStart =
+    !starting && resumeStatus !== 'uploading' &&
+    (mode === 'role' ? !!selectedRole : mode === 'company' ? targetCompany.trim().length > 0 : resumeStatus === 'success');
 
   return (
     <div className="min-h-screen bg-[#0f172a] py-12 relative overflow-hidden">
@@ -92,33 +103,116 @@ function InterviewSetup({
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">Start Your Interview</h1>
             <p className="text-lg text-slate-300">
-              Select a role and begin your mock interview. Questions are generated fresh for every attempt.
+              Choose how you'd like to prepare. Questions are generated fresh for every attempt.
             </p>
           </div>
 
+          {/* Mode tabs */}
+          <div className="grid grid-cols-3 gap-3 mb-8">
+            {MODE_TABS.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => onSelectMode(tab.value)}
+                className={`px-3 py-3 rounded-xl border text-sm font-semibold transition-all duration-200 ${
+                  mode === tab.value
+                    ? 'bg-blue-600/15 border-blue-500/60 text-blue-300'
+                    : 'bg-slate-800/50 border-white/10 text-slate-300 hover:border-blue-500/40'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-4">Select Your Role</label>
 
-              {rolesLoading ? (
-                <div className="flex items-center justify-center gap-2 text-slate-400 py-10">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Loading roles...
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {roles.map((roleName, index) => (
-                    <RoleCard
-                      key={index}
-                      role={roleName}
-                      isActive={selectedRole === roleName}
-                      onClick={() => onSelectRole(roleName)}
+            {/* ROLE mode */}
+            {mode === 'role' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-4">Select Your Role</label>
+                {rolesLoading ? (
+                  <div className="flex items-center justify-center gap-2 text-slate-400 py-10">
+                    <Loader2 className="h-5 w-5 animate-spin" /> Loading roles...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {roles.map((roleName, index) => (
+                      <RoleCard
+                        key={index}
+                        role={roleName}
+                        isActive={selectedRole === roleName}
+                        onClick={() => onSelectRole(roleName)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* COMPANY mode */}
+            {mode === 'company' && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
+                  <Building2 className="h-4 w-4 text-blue-400" /> Target Company
+                </label>
+                <input
+                  type="text"
+                  value={targetCompany}
+                  onChange={(e) => onTargetCompanyChange(e.target.value)}
+                  placeholder="e.g. Cognizant, Google, Amazon, TCS..."
+                  maxLength={60}
+                  autoFocus
+                  className="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+                <p className="text-xs text-slate-500 mt-1.5">
+                  You'll get questions styled after that company's commonly-reported interview questions, tagged with the company name.
+                </p>
+              </div>
+            )}
+
+            {/* RESUME mode */}
+            {mode === 'resume' && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
+                  <FileText className="h-4 w-4 text-blue-400" /> Upload Resume (PDF or .txt)
+                </label>
+
+                {!resumeFile ? (
+                  <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-600 rounded-xl py-8 cursor-pointer hover:border-blue-500/50 hover:bg-slate-800/30 transition-all">
+                    <Upload className="h-6 w-6 text-slate-400" />
+                    <span className="text-sm text-slate-400">Click to upload your resume</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.txt,application/pdf,text/plain"
+                      className="hidden"
+                      onChange={(e) => onResumeChange(e.target.files?.[0] || null)}
                     />
-                  ))}
-                </div>
-              )}
-            </div>
+                  </label>
+                ) : (
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-blue-400 shrink-0" />
+                      <span className="text-sm text-slate-300 truncate">{resumeFile.name}</span>
+                      {resumeStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-slate-400 shrink-0" />}
+                      {resumeStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />}
+                    </div>
+                    <button type="button" onClick={() => onResumeChange(null)} className="text-slate-400 hover:text-red-400 transition-colors shrink-0">
+                      <XIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+                {resumeError && <p className="text-xs text-red-400 mt-1.5">{resumeError}</p>}
+                {resumeStatus === 'success' && (
+                  <p className="text-xs text-green-400 mt-1.5">Resume processed — questions will be based on the skills found in it.</p>
+                )}
+                <p className="text-xs text-slate-500 mt-1.5">
+                  We'll pull out the skills/technologies mentioned in your resume and generate questions strictly on those.
+                </p>
+              </div>
+            )}
 
-            {/* Difficulty */}
+            {/* Difficulty — applies to all modes */}
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
                 <Gauge className="h-4 w-4 text-blue-400" /> Difficulty Level
@@ -142,7 +236,7 @@ function InterviewSetup({
               </div>
             </div>
 
-            {/* Question count */}
+            {/* Question count — applies to all modes, user always chooses this */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-3">
                 Number of Questions
@@ -165,60 +259,6 @@ function InterviewSetup({
               </div>
             </div>
 
-            {/* Target company (optional) */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
-                <Building2 className="h-4 w-4 text-blue-400" /> Target Company <span className="text-slate-500 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={targetCompany}
-                onChange={(e) => onTargetCompanyChange(e.target.value)}
-                placeholder="e.g. Google, Amazon, TCS..."
-                maxLength={60}
-                className="w-full px-4 py-2.5 bg-slate-800/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              />
-              <p className="text-xs text-slate-500 mt-1.5">
-                Questions will be styled after that company's interview patterns, tagged in brackets.
-              </p>
-            </div>
-
-            {/* Resume upload (optional) */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-300 mb-3">
-                <FileText className="h-4 w-4 text-blue-400" /> Resume <span className="text-slate-500 font-normal">(optional — PDF or .txt)</span>
-              </label>
-
-              {!resumeFile ? (
-                <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-600 rounded-xl py-6 cursor-pointer hover:border-blue-500/50 hover:bg-slate-800/30 transition-all">
-                  <Upload className="h-5 w-5 text-slate-400" />
-                  <span className="text-sm text-slate-400">Click to upload your resume</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.txt,application/pdf,text/plain"
-                    className="hidden"
-                    onChange={(e) => onResumeChange(e.target.files?.[0] || null)}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="h-4 w-4 text-blue-400 shrink-0" />
-                    <span className="text-sm text-slate-300 truncate">{resumeFile.name}</span>
-                    {resumeStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin text-slate-400 shrink-0" />}
-                    {resumeStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-400 shrink-0" />}
-                  </div>
-                  <button type="button" onClick={() => onResumeChange(null)} className="text-slate-400 hover:text-red-400 transition-colors shrink-0">
-                    <XIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-              {resumeError && <p className="text-xs text-red-400 mt-1.5">{resumeError}</p>}
-              {resumeStatus === 'success' && (
-                <p className="text-xs text-green-400 mt-1.5">Resume processed — questions will be tailored to it.</p>
-              )}
-            </div>
-
             <div className="bg-blue-900/30 border border-blue-800 rounded-xl p-6">
               <h3 className="font-semibold text-white mb-3">Interview Details:</h3>
               <ul className="space-y-2 text-sm text-slate-300">
@@ -226,7 +266,10 @@ function InterviewSetup({
                   <Clock className="h-4 w-4 text-blue-400" /> Duration: {durationMinutes} minutes ({questionCount} questions)
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-blue-400" /> Questions generated dynamically for {selectedRole || 'your role'}
+                  <CheckCircle className="h-4 w-4 text-blue-400" />
+                  {mode === 'role' && `Questions generated dynamically for ${selectedRole || 'your role'}`}
+                  {mode === 'company' && `Questions styled after ${targetCompany || 'the company'}'s interviews`}
+                  {mode === 'resume' && 'Questions based on the skills in your resume'}
                 </li>
                 <li className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-blue-400" /> Auto-submits when time runs out
@@ -242,7 +285,7 @@ function InterviewSetup({
 
             <button
               onClick={onStart}
-              disabled={!selectedRole || starting || resumeStatus === 'uploading'}
+              disabled={!canStart}
               className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1 transition-all duration-500 flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:translate-y-0"
             >
               {starting ? (
@@ -610,6 +653,7 @@ function InterviewPlayer({ role, questions, timeLimitSeconds, interviewId, onFin
 
 export default function Interview() {
   const [searchParams] = useSearchParams();
+  const [mode, setMode] = useState('role'); // 'role' | 'company' | 'resume'
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState(searchParams.get('role') || '');
@@ -670,16 +714,15 @@ export default function Interview() {
   };
 
   const startInterview = async () => {
-    if (!selectedRole) return;
     setStarting(true);
     setStartError('');
     try {
-      const data = await interviewApi.start(selectedRole, {
-        count: questionCount,
-        difficulty,
-        targetCompany: targetCompany.trim() || undefined,
-        resumeText: resumeText || undefined,
-      });
+      const params = { mode, count: questionCount, difficulty };
+      if (mode === 'role') params.role = selectedRole;
+      if (mode === 'company') params.targetCompany = targetCompany.trim();
+      if (mode === 'resume') params.resumeText = resumeText;
+
+      const data = await interviewApi.start(params);
       setSession({
         interviewId: data.interviewId,
         role: data.role,
@@ -702,6 +745,8 @@ export default function Interview() {
   if (!session) {
     return (
       <InterviewSetup
+        mode={mode}
+        onSelectMode={setMode}
         roles={roles}
         rolesLoading={rolesLoading}
         selectedRole={selectedRole}

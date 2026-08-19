@@ -161,8 +161,9 @@ const Results = () => {
     }
   };
 
-  // Show message if no interview data passed
-  if (!questions || !answers) {
+  // Show message if no interview data passed AND no past history at all.
+  const hasJustCompleted = Boolean(questions && answers);
+  if (!hasJustCompleted && !loadingReviews && detailedResults.length === 0) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center py-12">
         <div className="text-center animate-fadeInUp">
@@ -177,13 +178,16 @@ const Results = () => {
   }
 
   // Count correct answers (ScoreSummary derives "wrong" as total - correct itself)
+  // Only meaningful when we actually have a just-completed interview in state.
   let correctCount = 0;
-  questions.forEach((q) => {
-    const answer = answers[q.id];
-    if (answer !== undefined && answer !== '' && answer === q.correctAnswer) correctCount++;
-  });
+  if (hasJustCompleted) {
+    questions.forEach((q) => {
+      const answer = answers[q.id];
+      if (answer !== undefined && answer !== '' && answer === q.correctAnswer) correctCount++;
+    });
+  }
 
-  const accuracy = Math.round((correctCount / questions.length) * 100);
+  const accuracy = hasJustCompleted ? Math.round((correctCount / questions.length) * 100) : 0;
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -252,32 +256,36 @@ const Results = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="mb-8 animate-fadeInUp">
-          <Link to="/interview" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4" /> Back to Interview
+          <Link to={hasJustCompleted ? "/interview" : "/dashboard"} className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-4">
+            <ArrowLeft className="h-4 w-4" /> {hasJustCompleted ? 'Back to Interview' : 'Back to Dashboard'}
           </Link>
-          <h1 className="text-3xl font-bold text-white">Interview Results</h1>
-          <p className="text-slate-400 mt-2">{role} • {formatTime(timeSpent || 300)}</p>
+          <h1 className="text-3xl font-bold text-white">{hasJustCompleted ? 'Interview Results' : 'Your Interview History'}</h1>
+          {hasJustCompleted && <p className="text-slate-400 mt-2">{role} • {formatTime(timeSpent || 300)}</p>}
         </div>
 
-        <div className="bg-slate-800/70 backdrop-blur-sm rounded-2xl shadow-lg p-8 mb-8 border border-slate-700/50 animate-fadeInUp stagger-1">
-          <ScoreSummary score={accuracy} correct={correctCount} total={questions.length} showTrophy />
-        </div>
+        {hasJustCompleted && (
+          <>
+            <div className="bg-slate-800/70 backdrop-blur-sm rounded-2xl shadow-lg p-8 mb-8 border border-slate-700/50 animate-fadeInUp stagger-1">
+              <ScoreSummary score={accuracy} correct={correctCount} total={questions.length} showTrophy />
+            </div>
 
-        <div className="bg-[#111827] rounded-2xl shadow-xl p-6 md:p-8 mb-8 border border-slate-700/50 animate-fadeInUp stagger-2 backdrop-blur-sm">
-          <h2 className="text-2xl font-bold text-white mb-6">Question Analysis</h2>
-          <div className="space-y-4">
-            {questions.map((q, index) => (
-              <QuestionCard
-                key={q.id}
-                question={q}
-                index={index}
-                userAnswer={answers[q.id]}
-                isExpanded={expandedCards[q.id]}
-                onToggle={toggleCard}
-              />
-            ))}
-          </div>
-        </div>
+            <div className="bg-[#111827] rounded-2xl shadow-xl p-6 md:p-8 mb-8 border border-slate-700/50 animate-fadeInUp stagger-2 backdrop-blur-sm">
+              <h2 className="text-2xl font-bold text-white mb-6">Question Analysis</h2>
+              <div className="space-y-4">
+                {questions.map((q, index) => (
+                  <QuestionCard
+                    key={q.id}
+                    question={q}
+                    index={index}
+                    userAnswer={answers[q.id]}
+                    isExpanded={expandedCards[q.id]}
+                    onToggle={toggleCard}
+                  />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         {(loadingReviews || detailedResults.length > 0) && (
           <div className="bg-[#111827] rounded-2xl shadow-lg p-6 md:p-8 mb-8 border border-slate-700 animate-fadeInUp stagger-3">

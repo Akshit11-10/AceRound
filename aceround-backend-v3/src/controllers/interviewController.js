@@ -13,7 +13,8 @@ function runValidation(req) {
 }
 
 const startValidators = [
-  body("role").trim().notEmpty().withMessage("Role is required.").isLength({ max: 100 }),
+  body("mode").optional().isIn(["role", "company", "resume"]).withMessage("mode must be role, company, or resume."),
+  body("role").optional().trim().isLength({ max: 100 }),
   body("count").optional().isInt({ min: 5, max: 40 }).withMessage("count must be between 5 and 40."),
   body("difficulty").optional().isIn(["easy", "medium", "hard"]).withMessage("difficulty must be easy, medium, or hard."),
   body("targetCompany").optional().trim().isLength({ max: 60 }).withMessage("targetCompany is too long."),
@@ -21,22 +22,48 @@ const startValidators = [
 ];
 
 // @route POST /api/interviews/start
-// Generates (AI or fallback) a fresh question set for `role`, stores the
-// full set (with correct answers) server-side, and returns only the
-// question text + options to the client — answers stay server-side until submit.
+// Generates (AI or fallback) a fresh question set, stores the full set
+// (with correct answers) server-side, and returns only the question text +
+// options to the client — answers stay server-side until submit.
+//
+// Three independent modes:
+//  - "role"    : classic flow, pick a role (+ difficulty).
+//  - "company" : pick a target company only — no role needed. Questions are
+//                styled after that company's commonly-reported interview
+//                questions, tagged "(Company)" at the end of each question.
+//  - "resume"  : upload a resume only — no role needed. Questions are based
+//                strictly on the skills/technologies found in the resume.
 const startInterview = asyncHandler(async (req, res) => {
   runValidation(req);
-  const { role, targetCompany, resumeText } = req.body;
+  const mode = req.body.mode || "role";
+  const { targetCompany, resumeText } = req.body;
   const count = req.body.count ? Number(req.body.count) : Number(process.env.DEFAULT_QUESTION_COUNT) || 20;
   const difficulty = req.body.difficulty || "medium";
+
+  if (mode === "role" && !req.body.role) {
+    throw new ApiError(400, "Role is required for role mode.");
+  }
+  if (mode === "company" && !targetCompany) {
+    throw new ApiError(400, "targetCompany is required for company mode.");
+  }
+  if (mode === "resume" && !resumeText) {
+    throw new ApiError(400, "resumeText is required for resume mode.");
+  }
+
+  // What gets stored/shown as the interview's "role" label depends on mode,
+  // since company/resume mode don't have a role selection at all.
+  const role = mode === "role" ? req.body.role : mode === "company" ? `${targetCompany} Interview` : "Resume-based Interview";
 
   // Time budget: 0.75 minutes per question (e.g. 20 questions -> 15 minutes).
   const timeLimitSeconds = Math.round(count * 0.75 * 60);
 
-  const { questions, source, provider } = await generateQuestions(role, count, {
+  const { questions, source, provider } = await generateQuestions({
+    mode,
+    role: mode === "role" ? req.body.role : undefined,
+    count,
     difficulty,
-    targetCompany,
-    resumeText,
+    targetCompany: mode === "company" ? targetCompany : undefined,
+    resumeText: mode === "resume" ? resumeText : undefined,
   });
 
   const questionDocs = questions.map((q) => ({
@@ -55,7 +82,7 @@ const startInterview = asyncHandler(async (req, res) => {
     totalQuestions: questionDocs.length,
     timeLimitSeconds,
     difficulty,
-    targetCompany: targetCompany || null,
+    targetCompany: mode === "company" ? targetCompany : null,
     source,
     aiProvider: provider,
   });
