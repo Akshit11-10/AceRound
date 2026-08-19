@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, Navigate, useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
+import AppNavbar from '../components/AppNavbar';
 import { questionApi, interviewApi, resumeApi } from '../services/interviewApi';
 
 import {
@@ -58,7 +59,7 @@ function RoleCard({ role: roleName, isActive, onClick }) {
             {roleName}
           </h4>
           <p className={`text-xs mt-0.5 transition-colors duration-300 group-hover:text-slate-400 ${isActive ? 'text-blue-400/70' : 'text-slate-500'}`}>
-            AI-generated · 15 min
+            Generate questions for {roleName}
           </p>
         </div>
       </div>
@@ -87,7 +88,7 @@ function InterviewSetup({
   targetCompany, onTargetCompanyChange,
   resumeFile, onResumeChange, resumeStatus, resumeError,
 }) {
-  const durationMinutes = Math.round(questionCount * 0.75 * 10) / 10;
+  const durationMinutes = Math.round(questionCount * 0.5 * 10) / 10;
 
   const canStart =
     !starting && resumeStatus !== 'uploading' &&
@@ -95,6 +96,8 @@ function InterviewSetup({
 
   return (
     <div className="min-h-screen bg-[#0f172a] py-12 relative overflow-hidden">
+      <AppNavbar />
+      <div className="h-16" />
       <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/5 rounded-full blur-3xl animate-float" />
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
 

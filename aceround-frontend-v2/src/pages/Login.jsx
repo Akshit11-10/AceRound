@@ -36,7 +36,7 @@ export default function Login() {
 
   // Rotate the showcase panel every few seconds — purely presentational.
   useEffect(() => {
-    const id = setInterval(() => setSlideIndex((i) => (i + 1) % SHOWCASE_SLIDES.length), 4000);
+    const id = setInterval(() => setSlideIndex((i) => (i + 1) % SHOWCASE_SLIDES.length), 2500);
     return () => clearInterval(id);
   }, []);
 

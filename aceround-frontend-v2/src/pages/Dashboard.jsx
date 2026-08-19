@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import StatCard from '../components/StatCard';
 import Footer from '../components/Footer';
+import AppNavbar from '../components/AppNavbar';
 import { useAuth } from '../hooks/useAuth';
 import { interviewApi } from '../services/interviewApi';
 
@@ -166,6 +167,8 @@ const Dashboard = () => {
   return ( 
     
     <div className="min-h-screen bg-[#0a0f1e] py-10 relative overflow-hidden">
+      <AppNavbar />
+      <div className="h-16" />
 
       {/* Background blobs */}
       <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500/4 rounded-full blur-3xl animate-float" />

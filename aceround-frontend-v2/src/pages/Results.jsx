@@ -2,6 +2,7 @@
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Footer from '../components/Footer';
+import AppNavbar from '../components/AppNavbar';
 import { interviewApi } from '../services/interviewApi';
 import {
   Trophy, CheckCircle, XCircle, TrendingUp, RotateCcw,
@@ -165,7 +166,8 @@ const Results = () => {
   const hasJustCompleted = Boolean(questions && answers);
   if (!hasJustCompleted && !loadingReviews && detailedResults.length === 0) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center py-12">
+      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center py-12">
+        <AppNavbar />
         <div className="text-center animate-fadeInUp">
           <h1 className="text-2xl font-bold text-white mb-4">No Interview Data Found</h1>
           <p className="text-slate-400 mb-6">Complete an interview first to see your results.</p>
@@ -206,6 +208,8 @@ const Results = () => {
 
     return (
       <div className="min-h-screen bg-[#0f172a] py-8">
+        <AppNavbar />
+        <div className="h-16" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <div className="mb-8 animate-fadeInUp">
@@ -253,6 +257,8 @@ const Results = () => {
   // Main results view
   return (
     <div className="min-h-screen bg-[#0f172a] py-8">
+      <AppNavbar />
+      <div className="h-16" />
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="mb-8 animate-fadeInUp">

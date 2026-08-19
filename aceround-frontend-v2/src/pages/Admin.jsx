@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Footer from '../components/Footer';
+import AppNavbar from '../components/AppNavbar';
 import { adminApi } from '../services/interviewApi';
 import { Users, ClipboardList, TrendingUp, UserPlus, Loader2, ShieldAlert, Sparkles } from 'lucide-react';
 
@@ -55,6 +56,8 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-[#0a0f1e] py-12">
+      <AppNavbar />
+      <div className="h-16" />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="flex items-center gap-3 mb-10">

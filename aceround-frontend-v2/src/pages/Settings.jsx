@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Footer from '../components/Footer';
+import AppNavbar from '../components/AppNavbar';
 import {
   User, Mail, Lock, Trash2, Save, Eye, EyeOff,
   AlertTriangle, CheckCircle, Loader2, ShieldAlert,
@@ -103,6 +104,8 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-[#0f172a] py-12">
+      <AppNavbar />
+      <div className="h-16" />
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
         <div className="animate-fadeInUp">
