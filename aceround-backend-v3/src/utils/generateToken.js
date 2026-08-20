@@ -16,11 +16,15 @@ function signToken(userId) {
  */
 function sendTokenCookie(res, token) {
   const isProd = process.env.NODE_ENV === "production";
+  const maxAgeMs = 2 * 60 * 60 * 1000; // 2 hours — short-lived so it survives a
+  // mobile "desktop site" mode switch (which can clear pure session cookies)
+  // while still auto-expiring reasonably soon on inactivity.
 
   res.cookie(process.env.COOKIE_NAME || "aceround_token", token, {
     httpOnly: true,
     secure: isProd,
     sameSite: isProd ? "none" : "lax",
+    maxAge: maxAgeMs,
     path: "/",
   });
 }
