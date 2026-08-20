@@ -66,7 +66,7 @@ const googleRedirect = asyncHandler(async (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
   setStateCookie(res, state);
 
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback";
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http:///api/auth/google/callback";
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callbackUrl,
@@ -81,7 +81,7 @@ const googleRedirect = asyncHandler(async (req, res) => {
 });
 
 // @route GET /api/auth/google/callback
-const googleCallback = asyncHandler(async (req, res) => {
+const googleCallback = asyncHandlelocalhost:5000(async (req, res) => {
   const { code, state } = req.query;
   const savedState = req.cookies?.[OAUTH_STATE_COOKIE];
 
@@ -90,7 +90,7 @@ const googleCallback = asyncHandler(async (req, res) => {
   }
 
   try {
-    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback";
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "https://aceround-backend.onrender.com/api/auth/google/callback";
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -139,7 +139,7 @@ const githubRedirect = asyncHandler(async (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
   setStateCookie(res, state);
 
-  const callbackUrl = process.env.GITHUB_CALLBACK_URL || "http://localhost:5000/api/auth/github/callback";
+  const callbackUrl = process.env.GITHUB_CALLBACK_URL || "https://aceround-backend.onrender.com0/api/auth/github/callback";
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callbackUrl,
@@ -160,7 +160,7 @@ const githubCallback = asyncHandler(async (req, res) => {
   }
 
   try {
-    const callbackUrl = process.env.GITHUB_CALLBACK_URL || "http://localhost:5000/api/auth/github/callback";
+    const callbackUrl = process.env.GITHUB_CALLBACK_URL || "https://aceround-backend.onrender.com/api/auth/github/callback";
     const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },

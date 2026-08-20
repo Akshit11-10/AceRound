@@ -72,12 +72,12 @@ The app works fine with just email/password. To enable "Continue with Google/Git
 **Google:**
 1. Go to https://console.cloud.google.com/apis/credentials
 2. Create an OAuth Client ID (Application type: **Web application**)
-3. Add an Authorized redirect URI: `http://localhost:5000/api/auth/google/callback`
+3. Add an Authorized redirect URI: `https://aceround-backend.onrender.com///api/auth/google/callback`
 4. Copy the Client ID and Client Secret into `.env` → `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 
 **GitHub:**
 1. Go to https://github.com/settings/developers → "New OAuth App"
-2. Set the Authorization callback URL to: `http://localhost:5000/api/auth/github/callback`
+2. Set the Authorization callback URL to: `https://aceround-backend.onrender.com/api/auth/github/callback`
 3. Copy the Client ID and generate a Client Secret into `.env` → `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
 
 Restart the backend after adding these. If a key is missing, the corresponding button simply redirects back to the login page with a friendly error instead of crashing.
