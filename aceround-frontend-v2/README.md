@@ -10,12 +10,12 @@ lives in the sibling `backend/` folder (Node.js + Express + MongoDB).
 cd backend
 npm install
 cp .env.example .env      # then edit MONGO_URI, JWT_SECRET (see backend/README.md)
-npm run dev                # runs on http://localhost:5000
+npm run dev                # runs on https://aceround-backend.onrender.com
 
 # 2. Start this frontend
 cd Frontend-Project
 npm install
-cp .env.example .env        # VITE_API_URL=http://localhost:5000/api by default
+cp .env.example .env        # VITE_API_URL=https://aceround-backend.onrender.com/api by default
 npm run dev                  # runs on http://localhost:3400
 ```
 

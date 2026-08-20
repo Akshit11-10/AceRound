@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://aceround-backend.onrender.comapi";
 
 // Full-page redirects to the backend's OAuth start routes — these are plain
 // <a> links, not fetch calls, since the browser needs to navigate to
