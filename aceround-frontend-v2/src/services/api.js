@@ -1,5 +1,5 @@
 // Base URL of the backend API. Configure via a .env file:
-//   VITE_API_URL=https://aceround-backend.onrender.com/api
+//   VITE_API_URL=https://aceround.onrender.com/api
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://aceround.onrender.com/api";
 
 class ApiRequestError extends Error {
