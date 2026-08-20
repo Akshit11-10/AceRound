@@ -139,7 +139,7 @@ const githubRedirect = asyncHandler(async (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
   setStateCookie(res, state);
 
-  const callbackUrl = process.env.GITHUB_CALLBACK_URL || "https://aceround-backend.onrender.com0/api/auth/github/callback";
+  const callbackUrl = process.env.GITHUB_CALLBACK_URL || "https://aceround-backend.onrender.com/api/auth/github/callback";
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: callbackUrl,
