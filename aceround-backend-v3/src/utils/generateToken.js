@@ -16,13 +16,14 @@ function signToken(userId) {
  */
 function sendTokenCookie(res, token) {
   const isProd = process.env.NODE_ENV === "production";
-  const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days, keep in sync with JWT_EXPIRES_IN
 
   res.cookie(process.env.COOKIE_NAME || "aceround_token", token, {
     httpOnly: true,
     secure: isProd, // requires HTTPS in production
     sameSite: isProd ? "none" : "lax",
-    maxAge: maxAgeMs,
+    // No maxAge/expires set — this makes it a SESSION cookie, which the
+    // browser deletes automatically when the browser/tab is fully closed.
+    // The JWT itself still has its own expiry (JWT_EXPIRES_IN) as a backstop.
     path: "/",
   });
 }
