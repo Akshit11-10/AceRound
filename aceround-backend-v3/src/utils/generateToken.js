@@ -19,11 +19,8 @@ function sendTokenCookie(res, token) {
 
   res.cookie(process.env.COOKIE_NAME || "aceround_token", token, {
     httpOnly: true,
-    secure: isProd, // requires HTTPS in production
+    secure: isProd,
     sameSite: isProd ? "none" : "lax",
-    // No maxAge/expires set — this makes it a SESSION cookie, which the
-    // browser deletes automatically when the browser/tab is fully closed.
-    // The JWT itself still has its own expiry (JWT_EXPIRES_IN) as a backstop.
     path: "/",
   });
 }
