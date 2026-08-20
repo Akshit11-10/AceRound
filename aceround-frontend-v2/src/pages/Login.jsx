@@ -15,7 +15,7 @@ const OAUTH_ERROR_MESSAGES = {
   github_not_configured: "GitHub sign-in isn't set up yet. Please use email/password.",
   google_login_failed: "Google sign-in failed. Please try again or use email/password.",
   github_login_failed: "GitHub sign-in failed. Please try again or use email/password.",
-  oauth_state_mismatch: "That sign-in link expired. Please try again.",
+  oauth_state_mismatch: "Sign-in was interrupted (often caused by switching between mobile/desktop site mid-login). Please try again without switching modes.",
 };
 
 export default function Login() {
