@@ -27,7 +27,7 @@ const stats = [
   { icon: Users,     value: "10K+",  label: "Active Users" },
   { icon: TrendingUp,value: "95%",   label: "Success Rate" },
   { icon: Briefcase, value: "500+",  label: "Companies" },
-  // { icon: Clock,     value: "15min", label: "Per Session" },
+  { icon: Clock,     value: "15min", label: "Per Session" },
 ];
 
 export default function Home() {
