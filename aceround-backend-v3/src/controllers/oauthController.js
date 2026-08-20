@@ -81,7 +81,7 @@ const googleRedirect = asyncHandler(async (req, res) => {
 });
 
 // @route GET /api/auth/google/callback
-const googleCallback = asyncHandlelocalhost:5000(async (req, res) => {
+const googleCallback = asyncHandler(async (req, res) => {
   const { code, state } = req.query;
   const savedState = req.cookies?.[OAUTH_STATE_COOKIE];
 
