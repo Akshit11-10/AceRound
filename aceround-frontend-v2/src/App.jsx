@@ -8,6 +8,7 @@ import Login     from "./pages/Login";
 import Register  from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Interview from "./pages/Interview";
+import StartMockDrive from "./pages/StartMockDrive";
 import Results   from "./pages/Results";
 import Settings  from "./pages/Settings";
 import Admin     from "./pages/Admin";
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/"          element={<Home />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/interview" element={<Interview />} />
+            <Route path="/mock-drive" element={<StartMockDrive />} />
             <Route path="/results"   element={<Results />} />
             <Route path="/settings"  element={<Settings />} />
             <Route path="/admin"     element={<Admin />} />

@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const interviewRoutes = require("./routes/interviewRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const resumeRoutes = require("./routes/resumeRoutes");
+const mockDriveRoutes = require("./routes/mockDriveRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 const { apiLimiter } = require("./middleware/rateLimiter");
@@ -46,6 +47,7 @@ app.use("/api/interviews", interviewRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/mock-drive", mockDriveRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
