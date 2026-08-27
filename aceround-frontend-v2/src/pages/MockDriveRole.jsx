@@ -45,7 +45,7 @@ const MockDriveRole = () => {
     setStarting(true);
     try {
       const data = await mockDriveApi.start({ source: 'role', role: selectedRole });
-      navigate(`/dashboard?driveId=${data.drive.id}`);
+      navigate(`/mock-drive/${data.drive.id}/mcq`);
     } catch (err) {
       setError(err.message || 'Could not start the mock drive. Please try again.');
     } finally {
