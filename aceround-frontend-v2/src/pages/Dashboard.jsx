@@ -2,7 +2,8 @@
 import { Link } from 'react-router-dom';
 import {
   Play, Clock, Target, TrendingUp, Award, Calendar,
-  ChevronRight, Code, Server, Layers, Atom, User, Lightbulb,LogOut, Menu, X, Brain
+  ChevronRight, Code, Server, Layers, Atom, User, Lightbulb,LogOut, Menu, X, Brain,
+  Briefcase, Sparkles
 } from 'lucide-react';
 import {
   LineChart, Line, PieChart as RePieChart, Pie, Cell,
@@ -183,6 +184,42 @@ const Dashboard = () => {
           </h1>
           <p className="text-slate-400">Track your interview preparation progress and continue practicing.</p>
         </div>
+        {/* Mock Drive entry cards */}
+        <div className="mb-10 animate-fadeInUp">
+          <h2 className="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+            Start a Full Mock Drive
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <Link
+              to="/mock-drive/role"
+              className="group bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-5 sm:p-6 transition-all duration-300 hover:-translate-y-1"
+            >
+              <Briefcase className="h-6 w-6 text-blue-400 mb-3" />
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1">By Role</h3>
+              <p className="text-slate-400 text-xs sm:text-sm mb-3">
+                MCQ + coding + AI interview, tailored to a role you pick.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-blue-400 font-semibold text-sm group-hover:gap-2.5 transition-all">
+                Start <ChevronRight className="h-4 w-4" />
+              </span>
+            </Link>
+
+            <Link
+              to="/mock-drive/resume"
+              className="group bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-5 sm:p-6 transition-all duration-300 hover:-translate-y-1"
+            >
+              <Sparkles className="h-6 w-6 text-purple-400 mb-3" />
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1">By Resume</h3>
+              <p className="text-slate-400 text-xs sm:text-sm mb-3">
+                Upload your resume for a drive built around your own skills.
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-purple-400 font-semibold text-sm group-hover:gap-2.5 transition-all">
+                Start <ChevronRight className="h-4 w-4" />
+              </span>
+            </Link>
+          </div>
+        </div>
+
         {/* Stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <StatCard icon={Target}     label="Interviews Completed" value={stats.totalInterviews.toString()} color="blue" />

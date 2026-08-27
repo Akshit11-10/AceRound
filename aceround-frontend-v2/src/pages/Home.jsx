@@ -108,6 +108,50 @@ export default function Home() {
           </div>
         </div>
       </section>
+            {/* Mock Drive section */}
+      <section className="py-16 sm:py-20 bg-[#0a0f1e] relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10 sm:mb-14">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">
+              Start a Full Mock Drive
+            </h2>
+            <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+              A complete 3-round pipeline — MCQ, then a coding round, then a live AI interview —
+              built around either a role you pick or your own resume.
+            </p>
+          </div>
+ 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Link
+              to={user ? "/mock-drive/role" : "/login"}
+              className="group bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1"
+            >
+              <Briefcase className="h-8 w-8 text-blue-400 mb-4" />
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">By Role</h3>
+              <p className="text-slate-400 text-sm mb-5">
+                Pick a target role (Frontend, Backend, etc.) and get a drive tailored to it.
+              </p>
+              <span className="inline-flex items-center gap-2 text-blue-400 font-semibold text-sm group-hover:gap-3 transition-all">
+                Start with a role <ChevronRight className="h-4 w-4" />
+              </span>
+            </Link>
+ 
+            <Link
+              to={user ? "/mock-drive/resume" : "/login"}
+              className="group bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1"
+            >
+              <Sparkles className="h-8 w-8 text-purple-400 mb-4" />
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">By Resume</h3>
+              <p className="text-slate-400 text-sm mb-5">
+                Upload your resume and get a drive built around your actual skills and projects.
+              </p>
+              <span className="inline-flex items-center gap-2 text-purple-400 font-semibold text-sm group-hover:gap-3 transition-all">
+                Start with your resume <ChevronRight className="h-4 w-4" />
+              </span>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* Stats section */}
       <section className="py-20 bg-[#0a0f1e]">
