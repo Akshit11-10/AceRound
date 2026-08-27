@@ -1,7 +1,7 @@
 // aceround-backend-v3/src/controllers/mockDriveController.js
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
-const MockDrive = require("../models/MOckDrive");
+const MockDrive = require("../models/MockDrive");
 
 const startMockDrive = asyncHandler(async (req, res) => {
   const { source, role, resumeText } = req.body;
