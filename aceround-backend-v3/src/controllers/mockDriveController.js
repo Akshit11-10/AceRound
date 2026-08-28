@@ -3,8 +3,8 @@ const ApiError = require("../utils/ApiError");
 const MockDrive = require("../models/MockDrive");
 const { generateQuestions } = require("../services/aiQuestionService");
 
-const MCQ_QUESTION_COUNT = 10;
-const MCQ_PASS_PERCENT = 60;
+const MCQ_QUESTION_COUNT = 30;
+const MCQ_PASS_PERCENT = 70;
 
 // @route POST /api/mock-drive/start
 // Body: either { source: "role", role: "Frontend Developer" }
@@ -92,7 +92,11 @@ const startMcq = asyncHandler(async (req, res) => {
   drive.mcqResult = { score: null, passed: null, weakTopics: [] };
   await drive.save();
 
-  res.json({ success: true, questions: drive.toPublicMcqQuestions() });
+  res.json({
+    success: true,
+    questions: drive.toPublicMcqQuestions(),
+    timeLimitSeconds: drive.mcqQuestions.length * 30, // 0.5 min per question
+  });
 });
 
 // @route POST /api/mock-drive/:id/mcq/submit

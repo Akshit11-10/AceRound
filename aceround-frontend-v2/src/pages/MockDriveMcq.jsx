@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { mockDriveApi } from '../services/mockDriveApi';
-import { Loader2, CheckCircle2, XCircle, ArrowRight, RotateCcw } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, ArrowRight, RotateCcw, Clock } from 'lucide-react';
 
 // Round 1 of the Mock Drive pipeline. Generates MCQs based on the drive's
 // source (role or resume), lets the user answer them, then submits for a
@@ -19,15 +19,43 @@ const MockDriveMcq = () => {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null); // { score, passed, correctCount, totalQuestions }
   const [error, setError] = useState('');
+  const [timeLeft, setTimeLeft] = useState(0);
+  const timerRef = useRef(null);
+  const hasSubmittedRef = useRef(false);
+  const answersRef = useRef({});
+
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  const submitAnswers = useCallback(async (finalAnswers) => {
+    if (hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
+    clearInterval(timerRef.current);
+    setSubmitting(true);
+    setError('');
+    try {
+      const data = await mockDriveApi.submitMcq(id, finalAnswers);
+      setResult(data);
+    } catch (err) {
+      setError(err.message || 'Could not submit your answers.');
+      hasSubmittedRef.current = false;
+    } finally {
+      setSubmitting(false);
+    }
+  }, [id]);
 
   const loadQuestions = async () => {
     setLoading(true);
     setError('');
     setResult(null);
     setAnswers({});
+    hasSubmittedRef.current = false;
+    clearInterval(timerRef.current);
     try {
       const data = await mockDriveApi.startMcq(id);
       setQuestions(data.questions || []);
+      setTimeLeft(data.timeLimitSeconds || (data.questions || []).length * 30);
     } catch (err) {
       setError(err.message || 'Could not load MCQ questions.');
     } finally {
@@ -40,24 +68,34 @@ const MockDriveMcq = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // Countdown timer — auto-submits whatever is answered when time runs out.
+  useEffect(() => {
+    if (loading || result || questions.length === 0) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          submitAnswers(answersRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, result, questions.length]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const selectAnswer = (questionId, optionIndex) => {
     setAnswers((prev) => ({ ...prev, [questionId]: optionIndex }));
   };
 
   const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined);
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setError('');
-    try {
-      const data = await mockDriveApi.submitMcq(id, answers);
-      setResult(data);
-    } catch (err) {
-      setError(err.message || 'Could not submit your answers.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#0a0f1e] text-slate-100 flex flex-col">
@@ -65,11 +103,25 @@ const MockDriveMcq = () => {
       <div className="h-16" />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 sm:py-14">
-        <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">MCQ Round</h1>
-          <p className="text-slate-400 text-sm sm:text-base">
-            Answer all questions, then submit. You need 60% or higher to unlock the coding round.
-          </p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">MCQ Round</h1>
+            <p className="text-slate-400 text-sm sm:text-base">
+              Answer all questions, then submit. You need 70% or higher to unlock the coding round.
+            </p>
+          </div>
+          {!loading && !result && questions.length > 0 && (
+            <div
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold shrink-0 ${
+                timeLeft <= 60
+                  ? 'border-red-500/50 bg-red-500/10 text-red-300'
+                  : 'border-slate-700 bg-slate-900/60 text-slate-200'
+              }`}
+            >
+              <Clock className="h-4 w-4" />
+              {formatTime(timeLeft)}
+            </div>
+          )}
         </div>
 
         {loading && (
@@ -114,7 +166,7 @@ const MockDriveMcq = () => {
 
             <button
               type="button"
-              onClick={handleSubmit}
+              onClick={() => submitAnswers(answers)}
               disabled={!allAnswered || submitting}
               className="mt-8 w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition"
             >
