@@ -1,80 +1,276 @@
-// A small, fixed bank of basic DSA problems (Arrays/Strings) used for the
-// Coding Round of every Mock Drive, regardless of role or resume. Each
-// problem reads input from stdin and must print the answer to stdout —
-// this keeps execution simple and works the same across any language
-// Judge0 supports.
-//
-// testCases: each has raw stdin text and the exact expected stdout text
-// (trimmed before comparing, so trailing newline differences don't matter).
+// LeetCode-style DSA problems (Arrays/Strings), same 4 problems for every
+// drive. For JavaScript/Python, the user only writes the function body —
+// the backend appends a hidden "driver" (built from testCases) before
+// sending to Judge0, so no stdin/stdout code is ever shown to the user.
+// For Java/C/C++, a full runnable program is provided with a clearly
+// marked section for the user's solution; the test data is baked into the
+// boilerplate itself (still real logic, just not blind-hidden for those languages).
 
 const DSA_PROBLEMS = [
   {
     id: "dsa-1",
     title: "Sum of Array",
-    description:
-      "Read an integer n, then n space-separated integers on the next line. Print their sum.",
-    starterCode: {
-      javascript:
-        "// Read input from stdin, print the sum to stdout\nconst lines = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n');\nconst n = parseInt(lines[0]);\nconst arr = lines[1].trim().split(' ').map(Number);\nconsole.log(arr.reduce((a, b) => a + b, 0));\n",
-      python:
-        "# Read input from stdin, print the sum to stdout\nn = int(input())\narr = list(map(int, input().split()))\nprint(sum(arr))\n",
-    },
+    functionName: { javascript: "sumArray", python: "sum_array" },
+    description: "Implement a function that returns the sum of all numbers in an array.",
     testCases: [
-      { stdin: "5\n1 2 3 4 5\n", expectedOutput: "15" },
-      { stdin: "3\n10 -2 7\n", expectedOutput: "15" },
-      { stdin: "1\n42\n", expectedOutput: "42" },
+      { args: [[1, 2, 3, 4, 5]], expected: 15 },
+      { args: [[10, -2, 7]], expected: 15 },
+      { args: [[42]], expected: 42 },
     ],
+    example: { input: "[1, 2, 3, 4, 5]", output: "15" },
+    starterCode: {
+      javascript: "function sumArray(arr) {\n  // your code here\n}",
+      python: "def sum_array(arr):\n    # your code here\n    pass",
+      java: `public class Main {
+
+    // ---- Write your solution here ----
+    static int sumArray(int[] arr) {
+        return 0;
+    }
+    // -----------------------------------
+
+    public static void main(String[] args) {
+        int[] a1 = {1, 2, 3, 4, 5};
+        int[] a2 = {10, -2, 7};
+        int[] a3 = {42};
+        System.out.println(sumArray(a1));
+        System.out.println(sumArray(a2));
+        System.out.println(sumArray(a3));
+    }
+}`,
+      c: `#include <stdio.h>
+
+// ---- Write your solution here ----
+int sumArray(int arr[], int n) {
+    return 0;
+}
+// -----------------------------------
+
+int main() {
+    int a1[] = {1, 2, 3, 4, 5};
+    int a2[] = {10, -2, 7};
+    int a3[] = {42};
+    printf("%d\\n", sumArray(a1, 5));
+    printf("%d\\n", sumArray(a2, 3));
+    printf("%d\\n", sumArray(a3, 1));
+    return 0;
+}`,
+      cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+// ---- Write your solution here ----
+int sumArray(vector<int> arr) {
+    return 0;
+}
+// -----------------------------------
+
+int main() {
+    cout << sumArray({1, 2, 3, 4, 5}) << "\\n";
+    cout << sumArray({10, -2, 7}) << "\\n";
+    cout << sumArray({42}) << "\\n";
+    return 0;
+}`,
+    },
   },
+
   {
     id: "dsa-2",
     title: "Reverse a String",
-    description: "Read a single line string. Print it reversed.",
-    starterCode: {
-      javascript:
-        "const line = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n')[0];\nconsole.log(line.split('').reverse().join(''));\n",
-      python: "s = input()\nprint(s[::-1])\n",
-    },
+    functionName: { javascript: "reverseString", python: "reverse_string" },
+    description: "Implement a function that returns the reverse of the given string.",
     testCases: [
-      { stdin: "hello\n", expectedOutput: "olleh" },
-      { stdin: "AceRound\n", expectedOutput: "dnuoRecA" },
-      { stdin: "a\n", expectedOutput: "a" },
+      { args: ["hello"], expected: "olleh" },
+      { args: ["AceRound"], expected: "dnuoRecA" },
+      { args: ["a"], expected: "a" },
     ],
+    example: { input: '"hello"', output: '"olleh"' },
+    starterCode: {
+      javascript: "function reverseString(s) {\n  // your code here\n}",
+      python: "def reverse_string(s):\n    # your code here\n    pass",
+      java: `public class Main {
+
+    // ---- Write your solution here ----
+    static String reverseString(String s) {
+        return null;
+    }
+    // -----------------------------------
+
+    public static void main(String[] args) {
+        System.out.println(reverseString("hello"));
+        System.out.println(reverseString("AceRound"));
+        System.out.println(reverseString("a"));
+    }
+}`,
+      c: `#include <stdio.h>
+#include <string.h>
+
+// ---- Write your solution here ----
+// Reverse the string in place.
+void reverseString(char* s) {
+}
+// -----------------------------------
+
+int main() {
+    char a1[] = "hello";
+    char a2[] = "AceRound";
+    char a3[] = "a";
+    reverseString(a1); printf("%s\\n", a1);
+    reverseString(a2); printf("%s\\n", a2);
+    reverseString(a3); printf("%s\\n", a3);
+    return 0;
+}`,
+      cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+// ---- Write your solution here ----
+string reverseString(string s) {
+    return "";
+}
+// -----------------------------------
+
+int main() {
+    cout << reverseString("hello") << "\\n";
+    cout << reverseString("AceRound") << "\\n";
+    cout << reverseString("a") << "\\n";
+    return 0;
+}`,
+    },
   },
+
   {
     id: "dsa-3",
     title: "Find the Maximum",
-    description:
-      "Read an integer n, then n space-separated integers on the next line. Print the maximum value.",
-    starterCode: {
-      javascript:
-        "const lines = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n');\nconst n = parseInt(lines[0]);\nconst arr = lines[1].trim().split(' ').map(Number);\nconsole.log(Math.max(...arr));\n",
-      python: "n = int(input())\narr = list(map(int, input().split()))\nprint(max(arr))\n",
-    },
+    functionName: { javascript: "findMax", python: "find_max" },
+    description: "Implement a function that returns the maximum value in an array.",
     testCases: [
-      { stdin: "4\n3 7 2 9\n", expectedOutput: "9" },
-      { stdin: "3\n-5 -1 -8\n", expectedOutput: "-1" },
-      { stdin: "1\n100\n", expectedOutput: "100" },
+      { args: [[3, 7, 2, 9]], expected: 9 },
+      { args: [[-5, -1, -8]], expected: -1 },
+      { args: [[100]], expected: 100 },
     ],
+    example: { input: "[3, 7, 2, 9]", output: "9" },
+    starterCode: {
+      javascript: "function findMax(arr) {\n  // your code here\n}",
+      python: "def find_max(arr):\n    # your code here\n    pass",
+      java: `public class Main {
+
+    // ---- Write your solution here ----
+    static int findMax(int[] arr) {
+        return 0;
+    }
+    // -----------------------------------
+
+    public static void main(String[] args) {
+        int[] a1 = {3, 7, 2, 9};
+        int[] a2 = {-5, -1, -8};
+        int[] a3 = {100};
+        System.out.println(findMax(a1));
+        System.out.println(findMax(a2));
+        System.out.println(findMax(a3));
+    }
+}`,
+      c: `#include <stdio.h>
+
+// ---- Write your solution here ----
+int findMax(int arr[], int n) {
+    return 0;
+}
+// -----------------------------------
+
+int main() {
+    int a1[] = {3, 7, 2, 9};
+    int a2[] = {-5, -1, -8};
+    int a3[] = {100};
+    printf("%d\\n", findMax(a1, 4));
+    printf("%d\\n", findMax(a2, 3));
+    printf("%d\\n", findMax(a3, 1));
+    return 0;
+}`,
+      cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+// ---- Write your solution here ----
+int findMax(vector<int> arr) {
+    return 0;
+}
+// -----------------------------------
+
+int main() {
+    cout << findMax({3, 7, 2, 9}) << "\\n";
+    cout << findMax({-5, -1, -8}) << "\\n";
+    cout << findMax({100}) << "\\n";
+    return 0;
+}`,
+    },
   },
+
   {
     id: "dsa-4",
     title: "Check Palindrome",
-    description:
-      "Read a single line string. Print 'true' if it reads the same forwards and backwards, else print 'false'.",
-    starterCode: {
-      javascript:
-        "const line = require('fs').readFileSync('/dev/stdin', 'utf8').split('\\n')[0].trim();\nconsole.log(line === line.split('').reverse().join('') ? 'true' : 'false');\n",
-      python: "s = input().strip()\nprint('true' if s == s[::-1] else 'false')\n",
-    },
+    functionName: { javascript: "isPalindrome", python: "is_palindrome" },
+    description: "Implement a function that returns true if the string reads the same forwards and backwards.",
     testCases: [
-      { stdin: "madam\n", expectedOutput: "true" },
-      { stdin: "hello\n", expectedOutput: "false" },
-      { stdin: "a\n", expectedOutput: "true" },
+      { args: ["madam"], expected: true },
+      { args: ["hello"], expected: false },
+      { args: ["a"], expected: true },
     ],
+    example: { input: '"madam"', output: "true" },
+    starterCode: {
+      javascript: "function isPalindrome(s) {\n  // your code here\n}",
+      python: "def is_palindrome(s):\n    # your code here\n    pass",
+      java: `public class Main {
+
+    // ---- Write your solution here ----
+    static boolean isPalindrome(String s) {
+        return false;
+    }
+    // -----------------------------------
+
+    public static void main(String[] args) {
+        System.out.println(isPalindrome("madam"));
+        System.out.println(isPalindrome("hello"));
+        System.out.println(isPalindrome("a"));
+    }
+}`,
+      c: `#include <stdio.h>
+#include <string.h>
+
+// ---- Write your solution here ----
+// Return 1 if s is a palindrome, 0 otherwise.
+int isPalindrome(char* s) {
+    return 0;
+}
+// -----------------------------------
+
+int main() {
+    char a1[] = "madam";
+    char a2[] = "hello";
+    char a3[] = "a";
+    printf("%s\\n", isPalindrome(a1) ? "true" : "false");
+    printf("%s\\n", isPalindrome(a2) ? "true" : "false");
+    printf("%s\\n", isPalindrome(a3) ? "true" : "false");
+    return 0;
+}`,
+      cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+// ---- Write your solution here ----
+bool isPalindrome(string s) {
+    return false;
+}
+// -----------------------------------
+
+int main() {
+    cout << (isPalindrome("madam") ? "true" : "false") << "\\n";
+    cout << (isPalindrome("hello") ? "true" : "false") << "\\n";
+    cout << (isPalindrome("a") ? "true" : "false") << "\\n";
+    return 0;
+}`,
+    },
   },
 ];
 
 const CODING_PASS_COUNT = 2; // out of DSA_PROBLEMS.length, must solve at least this many
+const SECONDS_PER_PROBLEM = 5 * 60; // 5 min per question -> 20 min total for 4
 
 function getDsaProblems() {
   return DSA_PROBLEMS;
@@ -84,4 +280,9 @@ function getDsaProblemById(id) {
   return DSA_PROBLEMS.find((p) => p.id === id) || null;
 }
 
-module.exports = { getDsaProblems, getDsaProblemById, CODING_PASS_COUNT };
+module.exports = {
+  getDsaProblems,
+  getDsaProblemById,
+  CODING_PASS_COUNT,
+  SECONDS_PER_PROBLEM,
+};

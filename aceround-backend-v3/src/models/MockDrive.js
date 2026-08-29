@@ -69,6 +69,9 @@ const mockDriveSchema = new mongoose.Schema(
       totalCount: { type: Number, default: null },
       passed: { type: Boolean, default: null },
     },
+    // Per-problem submit status for the coding round, e.g.
+    // { "dsa-1": { solved: true, submittedAt: ... }, ... }
+    codingProgress: { type: mongoose.Schema.Types.Mixed, default: {} },
     interviewResult: {
       score: { type: Number, default: null },
       feedback: { type: String, default: null },
@@ -94,6 +97,7 @@ mockDriveSchema.methods.toPublicJSON = function toPublicJSON() {
     status: this.status,
     mcqResult: this.mcqResult,
     codingResult: this.codingResult,
+    codingProgress: this.codingProgress,
     interviewResult: this.interviewResult,
     startedAt: this.startedAt,
     completedAt: this.completedAt,

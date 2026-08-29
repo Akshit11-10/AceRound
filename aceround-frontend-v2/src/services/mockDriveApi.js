@@ -15,6 +15,15 @@ export const mockDriveApi = {
 
   getCoding: (id) => apiFetch(`/mock-drive/${id}/coding`),
 
-  submitCoding: (id, submissions) =>
-    apiFetch(`/mock-drive/${id}/coding/submit`, { method: "POST", body: { submissions } }),
+  runCoding: (id, { problemId, language, sourceCode }) =>
+    apiFetch(`/mock-drive/${id}/coding/run`, {
+      method: "POST",
+      body: { problemId, language, sourceCode },
+    }),
+
+  submitCoding: (id, { problemId, language, sourceCode }) =>
+    apiFetch(`/mock-drive/${id}/coding/submit`, {
+      method: "POST",
+      body: { problemId, language, sourceCode },
+    }),
 };

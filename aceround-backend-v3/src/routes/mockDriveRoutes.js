@@ -7,6 +7,7 @@ const {
   startMcq,
   submitMcq,
   getCodingProblems,
+  runCoding,
   submitCoding,
 } = require("../controllers/mockDriveController");
 
@@ -20,6 +21,7 @@ router.get("/:id", getMockDrive);
 router.post("/:id/mcq/start", startMcq);
 router.post("/:id/mcq/submit", submitMcq);
 router.get("/:id/coding", getCodingProblems);
+router.post("/:id/coding/run", runCoding);
 router.post("/:id/coding/submit", submitCoding);
 
 module.exports = router;

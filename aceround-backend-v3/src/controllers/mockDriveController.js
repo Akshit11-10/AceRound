@@ -2,8 +2,13 @@ const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const MockDrive = require("../models/MockDrive");
 const { generateQuestions } = require("../services/aiQuestionService");
-const { getDsaProblems, getDsaProblemById, CODING_PASS_COUNT } = require("../data/dsaProblems");
-const { runAgainstTestCases } = require("../services/judge0Service");
+const {
+  getDsaProblems,
+  getDsaProblemById,
+  CODING_PASS_COUNT,
+  SECONDS_PER_PROBLEM,
+} = require("../data/dsaProblems");
+const { gradeSubmission } = require("../services/judge0Service");
 
 const MCQ_QUESTION_COUNT = 30;
 const MCQ_PASS_PERCENT = 70;
@@ -173,7 +178,9 @@ const submitMcq = asyncHandler(async (req, res) => {
 });
 
 // @route GET /api/mock-drive/:id/coding
-// Returns the fixed DSA problem bank (no test cases/expected output leaked).
+// Returns the fixed DSA problem bank (no hidden test cases leaked), the
+// user's existing per-problem progress (so a page refresh doesn't lose
+// solved badges), and how long the whole round should be timed for.
 const getCodingProblems = asyncHandler(async (req, res) => {
   const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
   if (!drive) {
@@ -188,15 +195,54 @@ const getCodingProblems = asyncHandler(async (req, res) => {
     title: p.title,
     description: p.description,
     starterCode: p.starterCode,
-    // Show the first test case as a visible example; the rest stay hidden.
-    example: { input: p.testCases[0].stdin, output: p.testCases[0].expectedOutput },
+    example: p.example,
   }));
 
-  res.json({ success: true, problems, passCount: CODING_PASS_COUNT, totalCount: problems.length });
+  res.json({
+    success: true,
+    problems,
+    passCount: CODING_PASS_COUNT,
+    totalCount: problems.length,
+    timeLimitSeconds: problems.length * SECONDS_PER_PROBLEM,
+    progress: drive.codingProgress || {},
+  });
+});
+
+// @route POST /api/mock-drive/:id/coding/run
+// Body: { problemId, language, sourceCode }
+// Quick, non-persisted check against just the visible example test case.
+const runCoding = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "coding") {
+    throw new ApiError(400, `Coding round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  const { problemId, language, sourceCode } = req.body;
+  const problem = getDsaProblemById(problemId);
+  if (!problem) throw new ApiError(400, "Unknown problem.");
+  if (!sourceCode || !sourceCode.trim()) throw new ApiError(400, "No code submitted.");
+
+  const isFunctionOnly = language === "javascript" || language === "python";
+  const testCasesForRun = isFunctionOnly ? problem.testCases.slice(0, 1) : problem.testCases;
+
+  const grading = await gradeSubmission({
+    userCode: sourceCode,
+    language,
+    functionName: problem.functionName?.[language],
+    testCases: testCasesForRun,
+  });
+
+  res.json({ success: true, ...grading });
 });
 
 // @route POST /api/mock-drive/:id/coding/submit
-// Body: { submissions: [{ problemId, language, sourceCode }] }
+// Body: { problemId, language, sourceCode }
+// Full grading against every test case for this one problem. Persists the
+// per-problem result, recomputes the aggregate, and unlocks the interview
+// round once CODING_PASS_COUNT problems are solved.
 const submitCoding = asyncHandler(async (req, res) => {
   const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
   if (!drive) {
@@ -206,41 +252,24 @@ const submitCoding = asyncHandler(async (req, res) => {
     throw new ApiError(400, `Coding round is not active for this drive (current stage: ${drive.currentStage}).`);
   }
 
-  const submissions = Array.isArray(req.body.submissions) ? req.body.submissions : [];
-  if (submissions.length === 0) {
-    throw new ApiError(400, "No submissions provided.");
-  }
+  const { problemId, language, sourceCode } = req.body;
+  const problem = getDsaProblemById(problemId);
+  if (!problem) throw new ApiError(400, "Unknown problem.");
+  if (!sourceCode || !sourceCode.trim()) throw new ApiError(400, "No code submitted.");
 
-  const results = [];
-  let solvedCount = 0;
+  const grading = await gradeSubmission({
+    userCode: sourceCode,
+    language,
+    functionName: problem.functionName?.[language],
+    testCases: problem.testCases,
+  });
 
-  for (const sub of submissions) {
-    const problem = getDsaProblemById(sub.problemId);
-    if (!problem) {
-      results.push({ problemId: sub.problemId, solved: false, error: "Unknown problem." });
-      continue;
-    }
-    if (!sub.sourceCode || !sub.sourceCode.trim()) {
-      results.push({ problemId: sub.problemId, solved: false, error: "No code submitted." });
-      continue;
-    }
-
-    const caseResults = await runAgainstTestCases({
-      sourceCode: sub.sourceCode,
-      language: sub.language || "javascript",
-      testCases: problem.testCases,
-    });
-    const allPassed = caseResults.every((r) => r.passed);
-    if (allPassed) solvedCount += 1;
-
-    results.push({
-      problemId: sub.problemId,
-      solved: allPassed,
-      caseResults: caseResults.map((r) => ({ passed: r.passed, error: r.error || null })),
-    });
-  }
+  const progress = { ...(drive.codingProgress || {}) };
+  progress[problemId] = { solved: grading.passed, submittedAt: new Date() };
+  drive.codingProgress = progress;
 
   const totalCount = getDsaProblems().length;
+  const solvedCount = Object.values(progress).filter((p) => p.solved).length;
   const passed = solvedCount >= CODING_PASS_COUNT;
 
   drive.codingResult = { solvedCount, totalCount, passed };
@@ -251,11 +280,14 @@ const submitCoding = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
+    problemId,
+    passed: grading.passed,
+    lineResults: grading.lineResults,
+    error: grading.error,
     solvedCount,
     totalCount,
     passCount: CODING_PASS_COUNT,
-    passed,
-    results,
+    roundPassed: passed,
     drive: drive.toPublicJSON(),
   });
 });
@@ -267,5 +299,6 @@ module.exports = {
   startMcq,
   submitMcq,
   getCodingProblems,
+  runCoding,
   submitCoding,
 };
