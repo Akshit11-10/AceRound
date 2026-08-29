@@ -32,7 +32,7 @@ function getJudge0Config() {
  * Runs `sourceCode` (in `language`) once (no stdin needed — all our
  * programs embed their own test data) and returns the trimmed stdout.
  */
-async function runCode({ sourceCode, language }) {
+async function runCode({ sourceCode, language }, attempt = 1) {
   const languageId = LANGUAGE_IDS[language];
   if (!languageId) {
     throw new Error(`Unsupported language: ${language}`);
@@ -44,7 +44,7 @@ async function runCode({ sourceCode, language }) {
   if (apiHost) headers["X-RapidAPI-Host"] = apiHost;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 25000);
 
   try {
     const res = await fetch(`${baseUrl}/submissions?base64_encoded=false&wait=true`, {
@@ -58,6 +58,7 @@ async function runCode({ sourceCode, language }) {
     });
 
     if (!res.ok) {
+      if (attempt < 2) return runCode({ sourceCode, language }, attempt + 1);
       const errBody = await res.text().catch(() => "");
       throw new Error(`Judge0 error ${res.status}: ${errBody.slice(0, 300)}`);
     }
@@ -71,6 +72,11 @@ async function runCode({ sourceCode, language }) {
     }
 
     return { ok: true, output: (data.stdout || "").trim(), error: null };
+  } catch (err) {
+    if (attempt < 2 && err.name === "AbortError") {
+      return runCode({ sourceCode, language }, attempt + 1);
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
@@ -124,28 +130,54 @@ function buildExpectedOutput(testCases) {
 /**
  * Runs a full grading pass for one problem submission.
  * - For javascript/python: `userCode` should be just the function definition
- *   (matching `functionName`); a driver is appended automatically.
+ *   (matching `functionName`). Each test case runs as its own Judge0 call,
+ *   and we compare against the LAST non-empty printed line — this way an
+ *   accidental extra console.log/print in the user's own code doesn't
+ *   throw off the comparison.
  * - For java/c/cpp: `userCode` is already a full, runnable program (the
- *   provided boilerplate with the user's edits) and is sent as-is.
- * `testCases` controls how many cases are checked (pass a 1-item array for
- * a quick "Run" preview using just the visible example, or the full set for
- * a real "Submit").
+ *   provided boilerplate with the user's edits) with all test cases baked
+ *   in, and is sent as-is in a single execution.
  */
 async function gradeSubmission({ userCode, language, functionName, testCases }) {
   const isFunctionOnly = language === "javascript" || language === "python";
 
-  const sourceCode = isFunctionOnly
-    ? buildJsPythonDriver({ userCode, language, functionName, testCases })
-    : userCode;
+  if (isFunctionOnly) {
+    const lineResults = [];
+    let firstError = null;
 
-  const { ok, output, error } = await runCode({ sourceCode, language });
+    for (const tc of testCases) {
+      const expected =
+        typeof tc.expected === "boolean" ? (tc.expected ? "true" : "false") : String(tc.expected);
+      const sourceCode = buildJsPythonDriver({ userCode, language, functionName, testCases: [tc] });
 
+      try {
+        const { ok, output, error } = await runCode({ sourceCode, language });
+        if (!ok) {
+          lineResults.push({ expected, actual: "", passed: false });
+          firstError = firstError || error;
+          continue;
+        }
+        const nonEmptyLines = output.split("\n").map((l) => l.trim()).filter(Boolean);
+        const actual = nonEmptyLines[nonEmptyLines.length - 1] || "";
+        lineResults.push({ expected, actual, passed: actual === expected });
+      } catch (err) {
+        lineResults.push({ expected, actual: "", passed: false });
+        firstError = firstError || err.message;
+      }
+    }
+
+    const allPassed = lineResults.every((r) => r.passed);
+    return { passed: allPassed, allPassed, error: firstError, lineResults };
+  }
+
+  // java/c/cpp: one execution, test data is hardcoded into the boilerplate.
+  const { ok, output, error } = await runCode({ sourceCode: userCode, language });
   if (!ok) {
-    return { passed: false, allPassed: false, output: "", error, lineResults: [] };
+    return { passed: false, allPassed: false, error, lineResults: [] };
   }
 
   const expectedLines = buildExpectedOutput(testCases).split("\n");
-  const actualLines = output.split("\n").map((l) => l.trim());
+  const actualLines = output.split("\n").map((l) => l.trim()).filter(Boolean);
 
   const lineResults = expectedLines.map((expectedLine, i) => ({
     expected: expectedLine,
@@ -154,8 +186,7 @@ async function gradeSubmission({ userCode, language, functionName, testCases }) 
   }));
 
   const allPassed = lineResults.every((r) => r.passed);
-
-  return { passed: allPassed, allPassed, output, error: null, lineResults };
+  return { passed: allPassed, allPassed, error: null, lineResults };
 }
 
 module.exports = { runCode, gradeSubmission, LANGUAGE_IDS };

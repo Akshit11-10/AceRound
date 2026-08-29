@@ -195,7 +195,10 @@ const getCodingProblems = asyncHandler(async (req, res) => {
     title: p.title,
     description: p.description,
     starterCode: p.starterCode,
-    example: p.example,
+    examples: p.testCases.map((tc) => ({
+      input: JSON.stringify(tc.args[0]),
+      output: typeof tc.expected === "boolean" ? (tc.expected ? "true" : "false") : String(tc.expected),
+    })),
   }));
 
   res.json({

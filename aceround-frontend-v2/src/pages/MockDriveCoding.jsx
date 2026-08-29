@@ -15,9 +15,13 @@ const LANGUAGES = [
 
 // Round 2 of the Mock Drive pipeline — a fixed set of basic DSA (Array/String)
 // problems, same for every drive. Each problem can be Run (quick check
-// against the visible example) or Submitted (full grading, persisted)
+// against the visible examples) or Submitted (full grading, persisted)
 // independently and in any order. Needs CODING_PASS_COUNT solved to unlock
 // the AI Interview round. A single overall timer covers all problems.
+//
+// Code is stored per (problemId, language) pair — switching language never
+// overwrites what you wrote in another language, and always shows the
+// right thing immediately.
 const MockDriveCoding = () => {
   const { id } = useParams();
 
@@ -26,7 +30,8 @@ const MockDriveCoding = () => {
   const [passCount, setPassCount] = useState(2);
   const [activeIndex, setActiveIndex] = useState(0);
   const [languageByProblem, setLanguageByProblem] = useState({});
-  const [codeByProblem, setCodeByProblem] = useState({});
+  // code[problemId][language] = source string
+  const [code, setCode] = useState({});
   const [solvedByProblem, setSolvedByProblem] = useState({});
   const [runResultByProblem, setRunResultByProblem] = useState({});
   const [running, setRunning] = useState(false);
@@ -46,18 +51,18 @@ const MockDriveCoding = () => {
         if (cancelled) return;
         setProblems(data.problems || []);
         setPassCount(data.passCount ?? 2);
-        setTimeLeft(data.timeLimitSeconds || (data.problems || []).length * 1200);
+        setTimeLeft(data.timeLimitSeconds || (data.problems || []).length * 300);
 
         const initialLang = {};
         const initialCode = {};
         const initialSolved = {};
         (data.problems || []).forEach((p) => {
           initialLang[p.id] = 'javascript';
-          initialCode[p.id] = p.starterCode?.javascript || '';
+          initialCode[p.id] = { ...(p.starterCode || {}) };
           if (data.progress?.[p.id]?.solved) initialSolved[p.id] = true;
         });
         setLanguageByProblem(initialLang);
-        setCodeByProblem(initialCode);
+        setCode(initialCode);
         setSolvedByProblem(initialSolved);
       } catch (err) {
         if (!cancelled) setError(err.message || 'Could not load coding problems.');
@@ -93,21 +98,17 @@ const MockDriveCoding = () => {
 
   const activeProblem = problems[activeIndex];
   const activeLanguage = activeProblem ? languageByProblem[activeProblem.id] || 'javascript' : 'javascript';
+  const activeCode = activeProblem ? code[activeProblem.id]?.[activeLanguage] ?? '' : '';
 
   const handleLanguageChange = (problemId, newLang) => {
     setLanguageByProblem((prev) => ({ ...prev, [problemId]: newLang }));
-    setCodeByProblem((prev) => {
-      const problem = problems.find((p) => p.id === problemId);
-      const wasStarter = Object.values(problem?.starterCode || {}).includes(prev[problemId]);
-      if (wasStarter) {
-        return { ...prev, [problemId]: problem?.starterCode?.[newLang] || '' };
-      }
-      return prev;
-    });
   };
 
-  const updateCode = (problemId, value) => {
-    setCodeByProblem((prev) => ({ ...prev, [problemId]: value }));
+  const updateCode = (problemId, language, value) => {
+    setCode((prev) => ({
+      ...prev,
+      [problemId]: { ...(prev[problemId] || {}), [language]: value },
+    }));
   };
 
   const handleRun = useCallback(async () => {
@@ -118,7 +119,7 @@ const MockDriveCoding = () => {
       const data = await mockDriveApi.runCoding(id, {
         problemId: activeProblem.id,
         language: activeLanguage,
-        sourceCode: codeByProblem[activeProblem.id] || '',
+        sourceCode: activeCode,
       });
       setRunResultByProblem((prev) => ({ ...prev, [activeProblem.id]: data }));
     } catch (err) {
@@ -126,7 +127,7 @@ const MockDriveCoding = () => {
     } finally {
       setRunning(false);
     }
-  }, [id, activeProblem, activeLanguage, codeByProblem]);
+  }, [id, activeProblem, activeLanguage, activeCode]);
 
   const handleSubmit = useCallback(async () => {
     if (!activeProblem) return;
@@ -136,7 +137,7 @@ const MockDriveCoding = () => {
       const data = await mockDriveApi.submitCoding(id, {
         problemId: activeProblem.id,
         language: activeLanguage,
-        sourceCode: codeByProblem[activeProblem.id] || '',
+        sourceCode: activeCode,
       });
       setSolvedByProblem((prev) => ({ ...prev, [activeProblem.id]: data.passed }));
       setRunResultByProblem((prev) => ({
@@ -148,7 +149,7 @@ const MockDriveCoding = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [id, activeProblem, activeLanguage, codeByProblem]);
+  }, [id, activeProblem, activeLanguage, activeCode]);
 
   const solvedCount = Object.values(solvedByProblem).filter(Boolean).length;
   const roundPassed = solvedCount >= passCount;
@@ -173,7 +174,7 @@ const MockDriveCoding = () => {
       <AppNavbar />
       <div className="h-16" />
 
-      <div className="sticky top-16 z-30 px-4 sm:px-6 py-3 bg-[#0a0f1e]/95 backdrop-blur-xl border-b border-slate-800/60 flex items-center justify-between max-w-5xl mx-auto w-full">
+      <div className="sticky top-16 z-30 px-4 sm:px-6 py-3 bg-[#0a0f1e]/95 backdrop-blur-xl border-b border-slate-800/60 flex items-center justify-between">
         <span className="text-sm text-slate-400">
           Solved {solvedCount}/{problems.length} · need {passCount}+ to pass
         </span>
@@ -189,22 +190,22 @@ const MockDriveCoding = () => {
         </div>
       </div>
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 py-8">
-        <div className="mb-6">
+      <main className="flex-1 w-full px-4 sm:px-6 py-6">
+        <div className="mb-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Coding Round</h1>
           <p className="text-slate-400 text-sm sm:text-base">
-            Solve any problem in any order. Run to test against the example, Submit to grade for real.
+            Solve any problem in any order. Run to test against the examples, Submit to grade for real.
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
+          <div className="mb-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3">
             {error}
           </div>
         )}
 
         {roundPassed && (
-          <div className="mb-6 text-center">
+          <div className="mb-4 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-3 bg-green-500/10 border border-green-500/30 text-green-300 rounded-xl text-sm">
               <CheckCircle2 className="h-4 w-4" />
               Round passed! AI Interview round is unlocked — this screen will connect to it soon.
@@ -213,7 +214,7 @@ const MockDriveCoding = () => {
         )}
 
         {timeUp && !roundPassed && (
-          <div className="mb-6 text-center">
+          <div className="mb-4 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-3 bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl text-sm">
               Time's up — you solved {solvedCount}/{problems.length}. Start a new drive to try again.
             </div>
@@ -239,8 +240,9 @@ const MockDriveCoding = () => {
         </div>
 
         {activeProblem && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 sm:gap-6">
+            {/* Left: problem + all test cases + run result */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-6 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-bold text-white">{activeProblem.title}</h2>
                 {solvedByProblem[activeProblem.id] && (
@@ -250,16 +252,22 @@ const MockDriveCoding = () => {
                 )}
               </div>
               <p className="text-slate-300 text-sm leading-relaxed mb-4">{activeProblem.description}</p>
-              <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs font-mono">
-                <p className="text-slate-500 mb-1">Example input:</p>
-                <pre className="text-slate-300 whitespace-pre-wrap mb-2">{activeProblem.example?.input}</pre>
-                <p className="text-slate-500 mb-1">Example output:</p>
-                <pre className="text-slate-300 whitespace-pre-wrap">{activeProblem.example?.output}</pre>
+
+              <p className="text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wide">Test Cases</p>
+              <div className="space-y-2 mb-4">
+                {activeProblem.examples.map((ex, i) => (
+                  <div key={i} className="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs font-mono">
+                    <p className="text-slate-500 mb-1">Input:</p>
+                    <pre className="text-slate-300 whitespace-pre-wrap mb-2">{ex.input}</pre>
+                    <p className="text-slate-500 mb-1">Expected Output:</p>
+                    <pre className="text-slate-300 whitespace-pre-wrap">{ex.output}</pre>
+                  </div>
+                ))}
               </div>
 
               {activeRunResult && (
                 <div
-                  className={`mt-4 rounded-lg border p-3 text-xs ${
+                  className={`rounded-lg border p-3 text-xs ${
                     activeRunResult.passed
                       ? 'border-green-500/30 bg-green-500/5 text-green-300'
                       : 'border-red-500/30 bg-red-500/5 text-red-300'
@@ -289,7 +297,8 @@ const MockDriveCoding = () => {
               )}
             </div>
 
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 sm:p-4">
+            {/* Right: editor — bigger */}
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col">
               <div className="flex items-center justify-end mb-2">
                 <select
                   value={activeLanguage}
@@ -305,11 +314,11 @@ const MockDriveCoding = () => {
               </div>
 
               <textarea
-                value={codeByProblem[activeProblem.id] || ''}
-                onChange={(e) => updateCode(activeProblem.id, e.target.value)}
+                value={activeCode}
+                onChange={(e) => updateCode(activeProblem.id, activeLanguage, e.target.value)}
                 spellCheck={false}
                 disabled={timeUp}
-                className="w-full h-64 sm:h-80 bg-slate-950 text-slate-100 font-mono text-sm rounded-lg p-4 border border-slate-800 focus:outline-none focus:border-blue-500 resize-y disabled:opacity-60"
+                className="w-full flex-1 min-h-[50vh] lg:min-h-[calc(100vh-320px)] bg-slate-950 text-slate-100 font-mono text-sm rounded-lg p-4 border border-slate-800 focus:outline-none focus:border-blue-500 resize-y disabled:opacity-60"
               />
 
               <div className="flex flex-col sm:flex-row gap-3 mt-4">
