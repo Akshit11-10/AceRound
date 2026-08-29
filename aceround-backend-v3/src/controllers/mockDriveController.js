@@ -2,6 +2,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const MockDrive = require("../models/MockDrive");
 const { generateQuestions } = require("../services/aiQuestionService");
+const { getDsaProblems, getDsaProblemById, CODING_PASS_COUNT } = require("../data/dsaProblems");
+const { runAgainstTestCases } = require("../services/judge0Service");
 
 const MCQ_QUESTION_COUNT = 30;
 const MCQ_PASS_PERCENT = 70;
@@ -76,12 +78,33 @@ const startMcq = asyncHandler(async (req, res) => {
 
   const params =
     drive.source === "resume"
-      ? { mode: "resume", resumeText: drive.resumeText, count: MCQ_QUESTION_COUNT }
-      : { mode: "role", role: drive.role, count: MCQ_QUESTION_COUNT };
+      ? { mode: "resume", resumeText: drive.resumeText }
+      : { mode: "role", role: drive.role };
 
-  const { questions } = await generateQuestions(params);
+  // The AI sometimes returns fewer valid questions than asked (some get
+  // dropped during validation). Keep asking for the shortfall until we
+  // have exactly MCQ_QUESTION_COUNT, de-duping by question text.
+  const collected = [];
+  const seen = new Set();
+  let attempts = 0;
+  while (collected.length < MCQ_QUESTION_COUNT && attempts < 4) {
+    attempts += 1;
+    const remaining = MCQ_QUESTION_COUNT - collected.length;
+    const { questions } = await generateQuestions({ ...params, count: remaining + 3 });
+    for (const q of questions) {
+      const key = q.question.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      collected.push(q);
+      if (collected.length === MCQ_QUESTION_COUNT) break;
+    }
+  }
 
-  drive.mcqQuestions = questions.map((q, index) => ({
+  if (collected.length < MCQ_QUESTION_COUNT) {
+    throw new ApiError(502, "Could not generate enough questions right now. Please try again.");
+  }
+
+  drive.mcqQuestions = collected.map((q, index) => ({
     questionId: `mcq-${index + 1}`,
     question: q.question,
     options: q.options,
@@ -149,4 +172,100 @@ const submitMcq = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { startMockDrive, getMockDrive, listMockDrives, startMcq, submitMcq };
+// @route GET /api/mock-drive/:id/coding
+// Returns the fixed DSA problem bank (no test cases/expected output leaked).
+const getCodingProblems = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "coding") {
+    throw new ApiError(400, `Coding round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  const problems = getDsaProblems().map((p) => ({
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    starterCode: p.starterCode,
+    // Show the first test case as a visible example; the rest stay hidden.
+    example: { input: p.testCases[0].stdin, output: p.testCases[0].expectedOutput },
+  }));
+
+  res.json({ success: true, problems, passCount: CODING_PASS_COUNT, totalCount: problems.length });
+});
+
+// @route POST /api/mock-drive/:id/coding/submit
+// Body: { submissions: [{ problemId, language, sourceCode }] }
+const submitCoding = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "coding") {
+    throw new ApiError(400, `Coding round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  const submissions = Array.isArray(req.body.submissions) ? req.body.submissions : [];
+  if (submissions.length === 0) {
+    throw new ApiError(400, "No submissions provided.");
+  }
+
+  const results = [];
+  let solvedCount = 0;
+
+  for (const sub of submissions) {
+    const problem = getDsaProblemById(sub.problemId);
+    if (!problem) {
+      results.push({ problemId: sub.problemId, solved: false, error: "Unknown problem." });
+      continue;
+    }
+    if (!sub.sourceCode || !sub.sourceCode.trim()) {
+      results.push({ problemId: sub.problemId, solved: false, error: "No code submitted." });
+      continue;
+    }
+
+    const caseResults = await runAgainstTestCases({
+      sourceCode: sub.sourceCode,
+      language: sub.language || "javascript",
+      testCases: problem.testCases,
+    });
+    const allPassed = caseResults.every((r) => r.passed);
+    if (allPassed) solvedCount += 1;
+
+    results.push({
+      problemId: sub.problemId,
+      solved: allPassed,
+      caseResults: caseResults.map((r) => ({ passed: r.passed, error: r.error || null })),
+    });
+  }
+
+  const totalCount = getDsaProblems().length;
+  const passed = solvedCount >= CODING_PASS_COUNT;
+
+  drive.codingResult = { solvedCount, totalCount, passed };
+  if (passed) {
+    drive.currentStage = "interview";
+  }
+  await drive.save();
+
+  res.json({
+    success: true,
+    solvedCount,
+    totalCount,
+    passCount: CODING_PASS_COUNT,
+    passed,
+    results,
+    drive: drive.toPublicJSON(),
+  });
+});
+
+module.exports = {
+  startMockDrive,
+  getMockDrive,
+  listMockDrives,
+  startMcq,
+  submitMcq,
+  getCodingProblems,
+  submitCoding,
+};

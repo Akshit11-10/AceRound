@@ -6,6 +6,8 @@ const {
   listMockDrives,
   startMcq,
   submitMcq,
+  getCodingProblems,
+  submitCoding,
 } = require("../controllers/mockDriveController");
 
 const router = express.Router();
@@ -17,5 +19,7 @@ router.post("/start", startMockDrive);
 router.get("/:id", getMockDrive);
 router.post("/:id/mcq/start", startMcq);
 router.post("/:id/mcq/submit", submitMcq);
+router.get("/:id/coding", getCodingProblems);
+router.post("/:id/coding/submit", submitCoding);
 
 module.exports = router;

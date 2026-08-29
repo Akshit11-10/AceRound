@@ -195,9 +195,14 @@ const MockDriveMcq = () => {
             </p>
 
             {result.passed ? (
-              <div className="inline-flex items-center gap-2 px-5 py-3 bg-green-500/10 border border-green-500/30 text-green-300 rounded-xl text-sm">
-                Coding round is unlocked — this screen will connect to it soon.
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate(`/mock-drive/${id}/coding`)}
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-medium px-6 py-3 rounded-xl transition"
+              >
+                <ArrowRight className="h-4 w-4" />
+                Continue to Coding Round
+              </button>
             ) : (
               <button
                 type="button"
