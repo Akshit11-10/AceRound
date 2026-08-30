@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Play, Clock, Target, TrendingUp, Award, Calendar,
   ChevronRight, Code, Server, Layers, Atom, User, Lightbulb,LogOut, Menu, X, Brain,
-  Briefcase, Sparkles
+  Briefcase, Sparkles, FileSearch
 } from 'lucide-react';
 import {
   LineChart, Line, PieChart as RePieChart, Pie, Cell,
@@ -218,6 +218,26 @@ const Dashboard = () => {
               </span>
             </Link>
           </div>
+        </div>
+
+        {/* Standalone tools */}
+        <div className="mb-10 animate-fadeInUp">
+          <h2 className="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+            Standalone Tools
+          </h2>
+          <Link
+            to="/resume-checker"
+            className="group block bg-slate-900/60 border border-slate-800 hover:border-green-500/50 rounded-2xl p-5 sm:p-6 transition-all duration-300 hover:-translate-y-1"
+          >
+            <FileSearch className="h-6 w-6 text-green-400 mb-3" />
+            <h3 className="text-base sm:text-lg font-bold text-white mb-1">Resume ATS Checker</h3>
+            <p className="text-slate-400 text-xs sm:text-sm mb-3">
+              Check your resume's ATS score, missing keywords, and get improvement suggestions — anytime.
+            </p>
+            <span className="inline-flex items-center gap-1.5 text-green-400 font-semibold text-sm group-hover:gap-2.5 transition-all">
+              Check now <ChevronRight className="h-4 w-4" />
+            </span>
+          </Link>
         </div>
 
         {/* Stats row */}

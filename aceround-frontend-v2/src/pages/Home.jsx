@@ -2,7 +2,7 @@
 import { useAuth } from "../hooks/useAuth";
 import {
   Brain, ChevronRight, Play, BarChart3, Users, Clock,
-  TrendingUp, Briefcase, Lightbulb, Quote, Sparkles,
+  TrendingUp, Briefcase, Lightbulb, Quote, Sparkles, FileSearch,
   Zap, Star,
 } from "lucide-react";
 import StatCard from "../components/StatCard";
@@ -108,7 +108,8 @@ export default function Home() {
           </div>
         </div>
       </section>
-            {/* Mock Drive section */}
+
+      {/* Mock Drive section */}
       <section className="py-16 sm:py-20 bg-[#0a0f1e] relative">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10 sm:mb-14">
@@ -120,7 +121,7 @@ export default function Home() {
               built around either a role you pick or your own resume.
             </p>
           </div>
- 
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Link
               to={user ? "/mock-drive/role" : "/login"}
@@ -135,7 +136,7 @@ export default function Home() {
                 Start with a role <ChevronRight className="h-4 w-4" />
               </span>
             </Link>
- 
+
             <Link
               to={user ? "/mock-drive/resume" : "/login"}
               className="group bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:-translate-y-1"
@@ -150,6 +151,22 @@ export default function Home() {
               </span>
             </Link>
           </div>
+
+          <Link
+            to={user ? "/resume-checker" : "/login"}
+            className="group mt-6 flex items-center justify-between bg-slate-900/60 border border-slate-800 hover:border-green-500/50 rounded-2xl p-5 sm:p-6 transition-all duration-300"
+          >
+            <div className="flex items-center gap-4">
+              <FileSearch className="h-7 w-7 text-green-400 shrink-0" />
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-white">Resume ATS Checker</h3>
+                <p className="text-slate-400 text-xs sm:text-sm">
+                  Standalone tool — check your ATS score and get suggestions anytime.
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-green-400 shrink-0 group-hover:translate-x-1 transition-transform" />
+          </Link>
         </div>
       </section>
 

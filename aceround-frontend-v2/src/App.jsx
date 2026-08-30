@@ -13,6 +13,7 @@ import MockDriveResume from "./pages/MockDriveResume";
 import MockDriveMcq from "./pages/MockDriveMcq";
 import MockDriveCoding from "./pages/MockDriveCoding";
 import MockDriveInterview from "./pages/MockDriveInterview";
+import ResumeAtsChecker from "./pages/ResumeAtsChecker";
 import Results   from "./pages/Results";
 import Settings  from "./pages/Settings";
 import Admin     from "./pages/Admin";
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/mock-drive/:id/mcq" element={<MockDriveMcq />} />
             <Route path="/mock-drive/:id/coding" element={<MockDriveCoding />} />
             <Route path="/mock-drive/:id/interview" element={<MockDriveInterview />} />
+            <Route path="/resume-checker" element={<ResumeAtsChecker />} />
             <Route path="/results"   element={<Results />} />
             <Route path="/settings"  element={<Settings />} />
             <Route path="/admin"     element={<Admin />} />
