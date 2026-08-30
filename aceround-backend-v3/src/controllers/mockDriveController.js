@@ -9,6 +9,13 @@ const {
   SECONDS_PER_PROBLEM,
 } = require("../data/dsaProblems");
 const { gradeSubmission } = require("../services/judge0Service");
+const {
+  startInterviewConversation,
+  continueInterviewConversation,
+  generateInterviewFeedback,
+} = require("../services/interviewChatService");
+
+const INTERVIEW_TIME_LIMIT_SECONDS = 20 * 60; // 20 min, within the 15-30 min range
 
 const MCQ_QUESTION_COUNT = 30;
 const MCQ_PASS_PERCENT = 70;
@@ -295,6 +302,138 @@ const submitCoding = asyncHandler(async (req, res) => {
   });
 });
 
+// @route GET /api/mock-drive/:id/interview
+// Returns the existing transcript (for resuming after a refresh), whether
+// the round is finished, and the time limit for the round.
+const getInterview = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "interview" && drive.currentStage !== "completed") {
+    throw new ApiError(400, `Interview round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  res.json({
+    success: true,
+    transcript: drive.interviewTranscript,
+    isFinished: drive.currentStage === "completed",
+    interviewResult: drive.interviewResult,
+    timeLimitSeconds: INTERVIEW_TIME_LIMIT_SECONDS,
+  });
+});
+
+// @route POST /api/mock-drive/:id/interview/start
+// Generates the interviewer's opening message. If a transcript already
+// exists (e.g. page refresh), just returns it instead of starting over.
+const startInterview = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "interview") {
+    throw new ApiError(400, `Interview round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  if (drive.interviewTranscript.length > 0) {
+    return res.json({ success: true, transcript: drive.interviewTranscript, resumed: true });
+  }
+
+  const { message } = await startInterviewConversation({
+    source: drive.source,
+    role: drive.role,
+    resumeText: drive.resumeText,
+    weakTopics: drive.mcqResult?.weakTopics,
+  });
+
+  drive.interviewTranscript = [{ role: "ai", text: message, at: new Date() }];
+  await drive.save();
+
+  res.json({ success: true, transcript: drive.interviewTranscript, resumed: false });
+});
+
+// @route POST /api/mock-drive/:id/interview/respond
+// Body: { message } — the candidate's answer (from speech-to-text or typed).
+const respondInterview = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "interview") {
+    throw new ApiError(400, `Interview round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  const userMessage = (req.body.message || "").trim();
+  if (!userMessage) {
+    throw new ApiError(400, "message is required.");
+  }
+
+  drive.interviewTranscript.push({ role: "user", text: userMessage, at: new Date() });
+
+  const { message, done } = await continueInterviewConversation({
+    source: drive.source,
+    role: drive.role,
+    resumeText: drive.resumeText,
+    weakTopics: drive.mcqResult?.weakTopics,
+    transcript: drive.interviewTranscript,
+  });
+
+  drive.interviewTranscript.push({ role: "ai", text: message, at: new Date() });
+
+  let interviewResult = null;
+  if (done) {
+    interviewResult = await generateInterviewFeedback({
+      source: drive.source,
+      role: drive.role,
+      transcript: drive.interviewTranscript,
+    });
+    drive.interviewResult = interviewResult;
+    drive.currentStage = "completed";
+    drive.status = "completed";
+    drive.completedAt = new Date();
+  }
+
+  await drive.save();
+
+  res.json({
+    success: true,
+    transcript: drive.interviewTranscript,
+    isFinished: done,
+    interviewResult,
+    drive: drive.toPublicJSON(),
+  });
+});
+
+// @route POST /api/mock-drive/:id/interview/finish
+// Force-ends the round (used when the timer runs out) and grades whatever
+// transcript exists so far.
+const finishInterview = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage === "completed") {
+    return res.json({ success: true, interviewResult: drive.interviewResult, drive: drive.toPublicJSON() });
+  }
+  if (drive.currentStage !== "interview") {
+    throw new ApiError(400, `Interview round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  const interviewResult = await generateInterviewFeedback({
+    source: drive.source,
+    role: drive.role,
+    transcript: drive.interviewTranscript,
+  });
+
+  drive.interviewResult = interviewResult;
+  drive.currentStage = "completed";
+  drive.status = "completed";
+  drive.completedAt = new Date();
+  await drive.save();
+
+  res.json({ success: true, interviewResult, drive: drive.toPublicJSON() });
+});
+
 module.exports = {
   startMockDrive,
   getMockDrive,
@@ -304,4 +443,8 @@ module.exports = {
   getCodingProblems,
   runCoding,
   submitCoding,
+  getInterview,
+  startInterview,
+  respondInterview,
+  finishInterview,
 };

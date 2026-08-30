@@ -76,6 +76,17 @@ const mockDriveSchema = new mongoose.Schema(
       score: { type: Number, default: null },
       feedback: { type: String, default: null },
     },
+    // The live back-and-forth conversation for the AI Interview round.
+    interviewTranscript: {
+      type: [
+        {
+          role: { type: String, enum: ["ai", "user"], required: true },
+          text: { type: String, required: true },
+          at: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
 
     startedAt: { type: Date, default: Date.now },
     completedAt: { type: Date, default: null },
@@ -99,6 +110,7 @@ mockDriveSchema.methods.toPublicJSON = function toPublicJSON() {
     codingResult: this.codingResult,
     codingProgress: this.codingProgress,
     interviewResult: this.interviewResult,
+    interviewTranscript: this.interviewTranscript,
     startedAt: this.startedAt,
     completedAt: this.completedAt,
   };

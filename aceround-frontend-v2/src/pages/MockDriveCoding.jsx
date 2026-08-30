@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { mockDriveApi } from '../services/mockDriveApi';
@@ -24,6 +24,7 @@ const LANGUAGES = [
 // right thing immediately.
 const MockDriveCoding = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [problems, setProblems] = useState([]);
@@ -206,10 +207,14 @@ const MockDriveCoding = () => {
 
         {roundPassed && (
           <div className="mb-4 text-center">
-            <div className="inline-flex items-center gap-2 px-5 py-3 bg-green-500/10 border border-green-500/30 text-green-300 rounded-xl text-sm">
+            <button
+              type="button"
+              onClick={() => navigate(`/mock-drive/${id}/interview`)}
+              className="inline-flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-medium transition"
+            >
               <CheckCircle2 className="h-4 w-4" />
-              Round passed! AI Interview round is unlocked — this screen will connect to it soon.
-            </div>
+              Round passed! Continue to AI Interview
+            </button>
           </div>
         )}
 

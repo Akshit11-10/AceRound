@@ -9,6 +9,10 @@ const {
   getCodingProblems,
   runCoding,
   submitCoding,
+  getInterview,
+  startInterview,
+  respondInterview,
+  finishInterview,
 } = require("../controllers/mockDriveController");
 
 const router = express.Router();
@@ -23,5 +27,9 @@ router.post("/:id/mcq/submit", submitMcq);
 router.get("/:id/coding", getCodingProblems);
 router.post("/:id/coding/run", runCoding);
 router.post("/:id/coding/submit", submitCoding);
+router.get("/:id/interview", getInterview);
+router.post("/:id/interview/start", startInterview);
+router.post("/:id/interview/respond", respondInterview);
+router.post("/:id/interview/finish", finishInterview);
 
 module.exports = router;

@@ -26,4 +26,13 @@ export const mockDriveApi = {
       method: "POST",
       body: { problemId, language, sourceCode },
     }),
+
+  getInterview: (id) => apiFetch(`/mock-drive/${id}/interview`),
+
+  startInterview: (id) => apiFetch(`/mock-drive/${id}/interview/start`, { method: "POST" }),
+
+  respondInterview: (id, message) =>
+    apiFetch(`/mock-drive/${id}/interview/respond`, { method: "POST", body: { message } }),
+
+  finishInterview: (id) => apiFetch(`/mock-drive/${id}/interview/finish`, { method: "POST" }),
 };
