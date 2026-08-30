@@ -3,7 +3,7 @@ import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { resumeApi } from '../services/interviewApi';
 import { atsApi } from '../services/atsApi';
-import { Upload, FileText, X as XIcon, Loader2, ArrowRight, AlertTriangle, Lightbulb, Search } from 'lucide-react';
+import { Upload, FileText, X as XIcon, Loader2, ArrowRight, AlertTriangle, Lightbulb, Search, Wand2, Download } from 'lucide-react';
 
 // Standalone feature — independent of the Mock Drive pipeline. Can be used
 // any time, any number of times, to check a resume's ATS-friendliness and
@@ -18,6 +18,8 @@ const ResumeAtsChecker = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+  const [improving, setImproving] = useState(false);
+  const [improvedResume, setImprovedResume] = useState('');
 
   const handleFileChange = async (e) => {
     const selected = e.target.files?.[0];
@@ -53,6 +55,7 @@ const ResumeAtsChecker = () => {
     }
     setAnalyzing(true);
     setResult(null);
+    setImprovedResume('');
     try {
       const data = await atsApi.analyze({ resumeText, jobDescription: jobDescription.trim() || undefined });
       setResult(data);
@@ -61,6 +64,39 @@ const ResumeAtsChecker = () => {
     } finally {
       setAnalyzing(false);
     }
+  };
+
+  const handleImprove = async () => {
+    if (!result) return;
+    setError('');
+    setImproving(true);
+    setImprovedResume('');
+    try {
+      const data = await atsApi.improve({
+        resumeText,
+        jobDescription: jobDescription.trim() || undefined,
+        missingKeywords: result.missingKeywords,
+        formattingIssues: result.formattingIssues,
+        suggestions: result.suggestions,
+      });
+      setImprovedResume(data.improvedResumeText || '');
+    } catch (err) {
+      setError(err.message || 'Could not generate an improved resume. Please try again.');
+    } finally {
+      setImproving(false);
+    }
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([improvedResume], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'improved-resume.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const scoreColor = (score) => {
@@ -197,6 +233,43 @@ const ResumeAtsChecker = () => {
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {!improvedResume && (
+              <button
+                type="button"
+                onClick={handleImprove}
+                disabled={improving}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-6 py-3 rounded-xl transition"
+              >
+                {improving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                Fix Issues & Improve Resume
+              </button>
+            )}
+
+            {improvedResume && (
+              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-green-400" /> Improved Resume
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition text-sm"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download (.txt)
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mb-3">
+                  Review this before using it — facts weren't invented, but always double-check
+                  before sending to an employer. Paste into Word/Google Docs to format it visually.
+                </p>
+                <pre className="whitespace-pre-wrap text-slate-300 text-sm bg-slate-950/60 border border-slate-800 rounded-lg p-4 max-h-[500px] overflow-y-auto font-sans">
+                  {improvedResume}
+                </pre>
               </div>
             )}
           </div>

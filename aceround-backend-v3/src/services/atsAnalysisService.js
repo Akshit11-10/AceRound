@@ -130,4 +130,96 @@ async function analyzeResumeAts({ resumeText, jobDescription }) {
   }
 }
 
-module.exports = { analyzeResumeAts };
+function buildImprovePrompt({ resumeText, jobDescription, missingKeywords, formattingIssues, suggestions }) {
+  const jdBlock = jobDescription ? `Target job description:\n"""${jobDescription.slice(0, 3000)}"""\n` : "";
+
+  return `You are an expert resume writer. Rewrite the resume below to fix the identified issues and improve its ATS score — WITHOUT inventing any facts, employers, dates, numbers, or achievements that are not already present or clearly implied in the original.
+
+Original resume:
+"""${resumeText.slice(0, 6000)}"""
+
+${jdBlock}
+Issues to address:
+- Missing keywords to naturally incorporate (only where genuinely relevant to the candidate's real skills/experience): ${missingKeywords.join(", ") || "none"}
+- Formatting issues to fix: ${formattingIssues.join("; ") || "none"}
+- Suggestions to apply: ${suggestions.join("; ") || "none"}
+
+Rules:
+- Do NOT fabricate employers, job titles, dates, degrees, or metrics that aren't in the original.
+- You MAY improve phrasing, structure, section organization, and word choice.
+- You MAY naturally weave in missing keywords only where they genuinely fit the candidate's real background.
+- Use clear plain-text section headers (e.g. "EXPERIENCE", "EDUCATION", "SKILLS") in ALL CAPS, one per line.
+- Use "- " for bullet points. No markdown symbols like ** or #.
+- Output ONLY the improved resume text, nothing else (no preamble, no explanation).`;
+}
+
+async function improveResume({ resumeText, jobDescription, missingKeywords, formattingIssues, suggestions }) {
+  const prompt = buildImprovePrompt({ resumeText, jobDescription, missingKeywords, formattingIssues, suggestions });
+  const provider = (process.env.AI_PROVIDER || "none").toLowerCase();
+
+  try {
+    let text;
+    if (provider === "gemini") {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+      const model = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      try {
+        const res = await fetch(GEMINI_ENDPOINT(model, apiKey), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.5 },
+          }),
+        });
+        if (!res.ok) throw new Error(`Gemini API error ${res.status}`);
+        const data = await res.json();
+        text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
+      } finally {
+        clearTimeout(timeout);
+      }
+    } else {
+      const endpoint = provider === "openai" ? OPENAI_ENDPOINT : GROQ_ENDPOINT;
+      const model =
+        provider === "openai"
+          ? process.env.OPENAI_MODEL || "gpt-5-mini"
+          : process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+      const apiKey = provider === "openai" ? process.env.OPENAI_API_KEY : process.env.GROQ_API_KEY;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 25000);
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: "You are an expert, honest resume writer. Never invent facts." },
+              { role: "user", content: prompt },
+            ],
+            temperature: 0.5,
+          }),
+        });
+        if (!res.ok) throw new Error(`API error ${res.status}`);
+        const data = await res.json();
+        text = data?.choices?.[0]?.message?.content || "";
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    const improved = (text || "").trim();
+    if (!improved) throw new Error("Empty response");
+    return improved;
+  } catch (err) {
+    console.warn(`[atsAnalysisService] improveResume failed: ${err.message}`);
+    throw new Error("Could not generate an improved resume right now. Please try again.");
+  }
+}
+
+module.exports = { analyzeResumeAts, improveResume };
