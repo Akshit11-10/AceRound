@@ -87,16 +87,26 @@ const ResumeAtsChecker = () => {
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([improvedResume], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'improved-resume.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    setError('');
+    try {
+      const blob = await atsApi.downloadDocx(improvedResume);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'improved-resume.docx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message || 'Could not download the resume. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   const scoreColor = (score) => {
@@ -257,15 +267,17 @@ const ResumeAtsChecker = () => {
                   <button
                     type="button"
                     onClick={handleDownload}
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition text-sm"
+                    disabled={downloading}
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg transition text-sm"
                   >
-                    <Download className="h-4 w-4" />
-                    Download (.txt)
+                    {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    Download (.docx)
                   </button>
                 </div>
                 <p className="text-xs text-slate-500 mb-3">
-                  Review this before using it — facts weren't invented, but always double-check
-                  before sending to an employer. Paste into Word/Google Docs to format it visually.
+                  Downloaded as a Word document (.docx) with proper headings and bullet points —
+                  open it in Word/Google Docs and style it further if you'd like. Always double-check
+                  before sending to an employer.
                 </p>
                 <pre className="whitespace-pre-wrap text-slate-300 text-sm bg-slate-950/60 border border-slate-800 rounded-lg p-4 max-h-[500px] overflow-y-auto font-sans">
                   {improvedResume}

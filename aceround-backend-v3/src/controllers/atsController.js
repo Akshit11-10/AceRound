@@ -1,6 +1,7 @@
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/ApiError");
 const { analyzeResumeAts, improveResume } = require("../services/atsAnalysisService");
+const { generateResumeDocxBuffer } = require("../services/docxBuilder");
 
 // @route POST /api/ats/analyze
 // Body: { resumeText, jobDescription (optional) }
@@ -43,4 +44,24 @@ const improveResumeHandler = asyncHandler(async (req, res) => {
   res.json({ success: true, improvedResumeText });
 });
 
-module.exports = { analyzeResume, improveResumeHandler };
+// @route POST /api/ats/improve/docx
+// Body: { improvedResumeText }
+// Converts already-generated improved resume text into a downloadable
+// .docx file (proper Word document — headings, bullets — not just plain text).
+const downloadImprovedDocx = asyncHandler(async (req, res) => {
+  const { improvedResumeText } = req.body;
+
+  if (!improvedResumeText || typeof improvedResumeText !== "string" || improvedResumeText.trim().length < 20) {
+    throw new ApiError(400, "improvedResumeText is required.");
+  }
+
+  const buffer = await generateResumeDocxBuffer(improvedResumeText.trim());
+
+  res.set({
+    "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "Content-Disposition": 'attachment; filename="improved-resume.docx"',
+  });
+  res.send(buffer);
+});
+
+module.exports = { analyzeResume, improveResumeHandler, downloadImprovedDocx };
