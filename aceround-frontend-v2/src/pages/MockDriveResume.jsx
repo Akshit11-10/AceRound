@@ -4,7 +4,7 @@ import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { resumeApi } from '../services/interviewApi';
 import { mockDriveApi } from '../services/mockDriveApi';
-import { Upload, FileText, X as XIcon, Loader2, ArrowRight, ListChecks, Code2, Mic } from 'lucide-react';
+import { Upload, FileText, X as XIcon, Loader2, ArrowRight, ListChecks, Code2, Mic, BrainCircuit } from 'lucide-react';
 
 // Entry point #2 for the Mock Drive pipeline — upload a resume instead of
 // picking a role. The MCQ round and AI interview will then be based on the
@@ -53,7 +53,7 @@ const MockDriveResume = () => {
     setStarting(true);
     try {
       const data = await mockDriveApi.start({ source: 'resume', resumeText });
-      navigate(`/mock-drive/${data.drive.id}/mcq`);
+      navigate(`/mock-drive/${data.drive.id}/aptitude`);
     } catch (err) {
       setError(err.message || 'Could not start the mock drive. Please try again.');
     } finally {
@@ -78,21 +78,26 @@ const MockDriveResume = () => {
           </p>
         </div>
 
-        {/* What happens next — 3 step preview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 sm:mb-10">
+        {/* What happens next — 4 step preview */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 sm:mb-10">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <BrainCircuit className="h-5 w-5 text-amber-400 mb-2" />
+            <p className="text-sm font-semibold text-white">1. Aptitude</p>
+            <p className="text-xs text-slate-400 mt-1">Quant, Reasoning &amp; Verbal mix.</p>
+          </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
             <ListChecks className="h-5 w-5 text-blue-400 mb-2" />
-            <p className="text-sm font-semibold text-white">1. MCQ Round</p>
+            <p className="text-sm font-semibold text-white">2. MCQ Round</p>
             <p className="text-xs text-slate-400 mt-1">Questions based on your resume's skills.</p>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
             <Code2 className="h-5 w-5 text-purple-400 mb-2" />
-            <p className="text-sm font-semibold text-white">2. Coding Round</p>
+            <p className="text-sm font-semibold text-white">3. Coding Round</p>
             <p className="text-xs text-slate-400 mt-1">A few basic DSA problems (arrays/strings).</p>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
             <Mic className="h-5 w-5 text-pink-400 mb-2" />
-            <p className="text-sm font-semibold text-white">3. AI Interview</p>
+            <p className="text-sm font-semibold text-white">4. AI Interview</p>
             <p className="text-xs text-slate-400 mt-1">Live voice interview about your projects.</p>
           </div>
         </div>

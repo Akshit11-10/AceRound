@@ -4,7 +4,7 @@ import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { questionApi } from '../services/interviewApi';
 import { mockDriveApi } from '../services/mockDriveApi';
-import { Loader2, ArrowRight, ListChecks, Code2, Mic } from 'lucide-react';
+import { Loader2, ArrowRight, ListChecks, Code2, Mic, BrainCircuit } from 'lucide-react';
 
 // Entry point #1 for the Mock Drive pipeline — pick a target role, then the
 // system generates role-based MCQs, a DSA coding round, and a role-based AI
@@ -45,7 +45,7 @@ const MockDriveRole = () => {
     setStarting(true);
     try {
       const data = await mockDriveApi.start({ source: 'role', role: selectedRole });
-      navigate(`/mock-drive/${data.drive.id}/mcq`);
+      navigate(`/mock-drive/${data.drive.id}/aptitude`);
     } catch (err) {
       setError(err.message || 'Could not start the mock drive. Please try again.');
     } finally {
@@ -70,21 +70,26 @@ const MockDriveRole = () => {
           </p>
         </div>
 
-        {/* What happens next — 3 step preview */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 sm:mb-10">
+        {/* What happens next — 4 step preview */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 sm:mb-10">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <BrainCircuit className="h-5 w-5 text-amber-400 mb-2" />
+            <p className="text-sm font-semibold text-white">1. Aptitude</p>
+            <p className="text-xs text-slate-400 mt-1">Quant, Reasoning &amp; Verbal mix.</p>
+          </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
             <ListChecks className="h-5 w-5 text-blue-400 mb-2" />
-            <p className="text-sm font-semibold text-white">1. MCQ Round</p>
+            <p className="text-sm font-semibold text-white">2. MCQ Round</p>
             <p className="text-xs text-slate-400 mt-1">Role-based questions with a pass cutoff.</p>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
             <Code2 className="h-5 w-5 text-purple-400 mb-2" />
-            <p className="text-sm font-semibold text-white">2. Coding Round</p>
+            <p className="text-sm font-semibold text-white">3. Coding Round</p>
             <p className="text-xs text-slate-400 mt-1">A few basic DSA problems (arrays/strings).</p>
           </div>
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
             <Mic className="h-5 w-5 text-pink-400 mb-2" />
-            <p className="text-sm font-semibold text-white">3. AI Interview</p>
+            <p className="text-sm font-semibold text-white">4. AI Interview</p>
             <p className="text-xs text-slate-400 mt-1">A short live voice interview for this role.</p>
           </div>
         </div>

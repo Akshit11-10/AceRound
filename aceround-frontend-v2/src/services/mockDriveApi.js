@@ -8,6 +8,11 @@ export const mockDriveApi = {
 
   list: () => apiFetch("/mock-drive"),
 
+  startAptitude: (id) => apiFetch(`/mock-drive/${id}/aptitude/start`, { method: "POST" }),
+
+  submitAptitude: (id, answers) =>
+    apiFetch(`/mock-drive/${id}/aptitude/submit`, { method: "POST", body: { answers } }),
+
   startMcq: (id) => apiFetch(`/mock-drive/${id}/mcq/start`, { method: "POST" }),
 
   submitMcq: (id, answers) =>

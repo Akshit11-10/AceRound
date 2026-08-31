@@ -11,6 +11,7 @@ import Interview from "./pages/Interview";
 import MockDriveRole from "./pages/MockDriveRole";
 import MockDriveResume from "./pages/MockDriveResume";
 import MockDriveMcq from "./pages/MockDriveMcq";
+import MockDriveAptitude from "./pages/MockDriveAptitude";
 import MockDriveCoding from "./pages/MockDriveCoding";
 import MockDriveInterview from "./pages/MockDriveInterview";
 import MockDriveReport from "./pages/MockDriveReport";
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/interview" element={<Interview />} />
             <Route path="/mock-drive/role" element={<MockDriveRole />} />
             <Route path="/mock-drive/resume" element={<MockDriveResume />} />
+            <Route path="/mock-drive/:id/aptitude" element={<MockDriveAptitude />} />
             <Route path="/mock-drive/:id/mcq" element={<MockDriveMcq />} />
             <Route path="/mock-drive/:id/coding" element={<MockDriveCoding />} />
             <Route path="/mock-drive/:id/interview" element={<MockDriveInterview />} />

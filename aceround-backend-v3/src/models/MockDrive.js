@@ -28,6 +28,21 @@ const mockDriveSchema = new mongoose.Schema(
     // than the raw file, since nothing else in the app persists resume files.
     resumeText: { type: String, default: null },
 
+    // Aptitude round: same shape/pattern as mcqQuestions — generic
+    // Quant+Reasoning+Verbal mix, generated before MCQ, no role/resume needed.
+    aptitudeQuestions: {
+      type: [
+        {
+          questionId: { type: String, required: true },
+          question: { type: String, required: true },
+          options: { type: [String], required: true },
+          correctAnswer: { type: Number, required: true },
+          explanation: { type: String, default: "" },
+        },
+      ],
+      default: [],
+    },
+
     // MCQ round: generated questions (correct answers included) stored here
     // temporarily until the user submits. Never sent to the client with
     // correctAnswer/explanation before submission.
@@ -48,8 +63,8 @@ const mockDriveSchema = new mongoose.Schema(
     // Which stage the user is currently on / unlocked up to.
     currentStage: {
       type: String,
-      enum: ["mcq", "coding", "interview", "completed"],
-      default: "mcq",
+      enum: ["aptitude", "mcq", "coding", "interview", "completed"],
+      default: "aptitude",
     },
 
     status: {
@@ -58,7 +73,11 @@ const mockDriveSchema = new mongoose.Schema(
       default: "in-progress",
     },
 
-    // Filled in as each round is completed (later phases will populate these).
+    // Filled in as each round is completed.
+    aptitudeResult: {
+      score: { type: Number, default: null },
+      passed: { type: Boolean, default: null },
+    },
     mcqResult: {
       score: { type: Number, default: null },
       passed: { type: Boolean, default: null },
@@ -71,6 +90,10 @@ const mockDriveSchema = new mongoose.Schema(
     },
     // Per-problem submit status for the coding round, e.g.
     // { "dsa-1": { solved: true, submittedAt: ... }, ... }
+    // Which 4 problems (from the larger pool) were randomly picked for this
+    // drive's coding round — persisted so refreshing the page doesn't
+    // reshuffle them mid-attempt.
+    codingProblemIds: { type: [String], default: [] },
     codingProgress: { type: mongoose.Schema.Types.Mixed, default: {} },
     interviewResult: {
       score: { type: Number, default: null },
@@ -106,6 +129,7 @@ mockDriveSchema.methods.toPublicJSON = function toPublicJSON() {
     hasResume: !!this.resumeText,
     currentStage: this.currentStage,
     status: this.status,
+    aptitudeResult: this.aptitudeResult,
     mcqResult: this.mcqResult,
     codingResult: this.codingResult,
     codingProgress: this.codingProgress,
@@ -114,6 +138,15 @@ mockDriveSchema.methods.toPublicJSON = function toPublicJSON() {
     startedAt: this.startedAt,
     completedAt: this.completedAt,
   };
+};
+
+// Never leak correct answers / explanations while the Aptitude round is in progress.
+mockDriveSchema.methods.toPublicAptitudeQuestions = function toPublicAptitudeQuestions() {
+  return this.aptitudeQuestions.map((q) => ({
+    id: q.questionId,
+    question: q.question,
+    options: q.options,
+  }));
 };
 
 // Never leak correct answers / explanations while the MCQ round is in progress.

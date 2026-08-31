@@ -45,6 +45,19 @@ const JSON_SHAPE_RULES = `Rules:
 function buildPrompt({ mode = "role", role, count, difficulty = "medium", targetCompany, resumeText }) {
   const difficultyLine = DIFFICULTY_GUIDANCE[difficulty] || DIFFICULTY_GUIDANCE.medium;
 
+  if (mode === "aptitude") {
+    return `You are an expert exam-question writer for Indian campus placement aptitude tests (in the style of TCS NQT, Infosys, Wipro, Capgemini).
+
+Generate exactly ${count} unique multiple-choice questions, mixing THREE categories roughly evenly:
+1. Quantitative Aptitude (percentages, profit & loss, time-speed-distance, ratios, averages, simple/compound interest, number series)
+2. Logical Reasoning (puzzles, blood relations, coding-decoding, series completion, direction sense, syllogisms)
+3. Verbal Ability (grammar correction, synonyms/antonyms, sentence completion, short reading comprehension)
+
+Keep difficulty at a standard campus-placement level — not too easy, not olympiad-level.
+
+${JSON_SHAPE_RULES}`;
+  }
+
   if (mode === "company") {
     return `You are an expert technical interviewer with deep knowledge of "${targetCompany}"'s hiring process.
 

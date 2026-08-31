@@ -53,7 +53,7 @@ const startMockDrive = asyncHandler(async (req, res) => {
     source,
     role: source === "role" ? role.trim() : null,
     resumeText: source === "resume" ? resumeText.trim().slice(0, 6000) : null,
-    currentStage: "mcq",
+    currentStage: "aptitude",
     status: "in-progress",
   });
 
@@ -74,6 +74,99 @@ const getMockDrive = asyncHandler(async (req, res) => {
 const listMockDrives = asyncHandler(async (req, res) => {
   const drives = await MockDrive.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(20);
   res.json({ success: true, drives: drives.map((d) => d.toPublicJSON()) });
+});
+
+const APTITUDE_QUESTION_COUNT = 20;
+const APTITUDE_PASS_PERCENT = 60;
+
+// @route POST /api/mock-drive/:id/aptitude/start
+// Generates a generic Quant+Reasoning+Verbal mix (no role/resume needed —
+// same for everyone). This is the very first round, before MCQ.
+const startAptitude = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "aptitude") {
+    throw new ApiError(400, `Aptitude round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+
+  const collected = [];
+  const seen = new Set();
+  let attempts = 0;
+  while (collected.length < APTITUDE_QUESTION_COUNT && attempts < 4) {
+    attempts += 1;
+    const remaining = APTITUDE_QUESTION_COUNT - collected.length;
+    const { questions } = await generateQuestions({ mode: "aptitude", count: remaining + 3 });
+    for (const q of questions) {
+      const key = q.question.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      collected.push(q);
+      if (collected.length === APTITUDE_QUESTION_COUNT) break;
+    }
+  }
+
+  if (collected.length < APTITUDE_QUESTION_COUNT) {
+    throw new ApiError(502, "Could not generate enough questions right now. Please try again.");
+  }
+
+  drive.aptitudeQuestions = collected.map((q, index) => ({
+    questionId: `apt-${index + 1}`,
+    question: q.question,
+    options: q.options,
+    correctAnswer: q.correctAnswer,
+    explanation: q.explanation,
+  }));
+  drive.aptitudeResult = { score: null, passed: null };
+  await drive.save();
+
+  res.json({
+    success: true,
+    questions: drive.toPublicAptitudeQuestions(),
+    timeLimitSeconds: drive.aptitudeQuestions.length * 45, // 45 sec/question — apti/verbal/reasoning need a bit more time than pure MCQ
+  });
+});
+
+// @route POST /api/mock-drive/:id/aptitude/submit
+// Body: { answers: { [questionId]: selectedOptionIndex } }
+const submitAptitude = asyncHandler(async (req, res) => {
+  const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
+  if (!drive) {
+    throw new ApiError(404, "Mock Drive not found.");
+  }
+  if (drive.currentStage !== "aptitude") {
+    throw new ApiError(400, `Aptitude round is not active for this drive (current stage: ${drive.currentStage}).`);
+  }
+  if (!drive.aptitudeQuestions.length) {
+    throw new ApiError(400, "No aptitude questions to submit. Call /aptitude/start first.");
+  }
+
+  const answers = req.body.answers || {};
+  let correctCount = 0;
+
+  for (const q of drive.aptitudeQuestions) {
+    if (answers[q.questionId] === q.correctAnswer) correctCount += 1;
+  }
+
+  const score = Math.round((correctCount / drive.aptitudeQuestions.length) * 100);
+  const passed = score >= APTITUDE_PASS_PERCENT;
+
+  drive.aptitudeResult = { score, passed };
+  if (passed) {
+    drive.currentStage = "mcq";
+  }
+  await drive.save();
+
+  res.json({
+    success: true,
+    score,
+    passed,
+    passMark: APTITUDE_PASS_PERCENT,
+    correctCount,
+    totalQuestions: drive.aptitudeQuestions.length,
+    drive: drive.toPublicJSON(),
+  });
 });
 
 // @route POST /api/mock-drive/:id/mcq/start
@@ -451,6 +544,8 @@ module.exports = {
   startMockDrive,
   getMockDrive,
   listMockDrives,
+  startAptitude,
+  submitAptitude,
   startMcq,
   submitMcq,
   getCodingProblems,

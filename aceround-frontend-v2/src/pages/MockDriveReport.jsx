@@ -4,7 +4,7 @@ import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { mockDriveApi } from '../services/mockDriveApi';
 import {
-  Loader2, CheckCircle2, XCircle, ListChecks, Code2, Mic,
+  Loader2, CheckCircle2, XCircle, ListChecks, Code2, Mic, BrainCircuit,
   TrendingUp, TrendingDown, Home,
 } from 'lucide-react';
 
@@ -64,15 +64,19 @@ const MockDriveReport = () => {
     );
   }
 
+  const aptitude = drive.aptitudeResult || {};
   const mcq = drive.mcqResult || {};
   const coding = drive.codingResult || {};
   const interview = drive.interviewResult || {};
 
-  const roundsCleared = [mcq.passed, coding.passed, interview.score != null].filter(Boolean).length;
-  const allCleared = mcq.passed && coding.passed && interview.score != null;
+  const roundsCleared = [aptitude.passed, mcq.passed, coding.passed, interview.score != null].filter(Boolean).length;
+  const allCleared = aptitude.passed && mcq.passed && coding.passed && interview.score != null;
 
   const strengths = [];
   const weaknesses = [];
+
+  if (aptitude.passed) strengths.push(`Scored ${aptitude.score}% in the Aptitude round`);
+  else if (aptitude.score != null) weaknesses.push(`Aptitude score was ${aptitude.score}% (below the 60% pass mark)`);
 
   if (mcq.passed) strengths.push(`Scored ${mcq.score}% in the MCQ round`);
   else if (mcq.score != null) weaknesses.push(`MCQ score was ${mcq.score}% (below the 70% pass mark)`);
@@ -103,11 +107,28 @@ const MockDriveReport = () => {
           )}
           <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Drive Report Card</h1>
           <p className="text-slate-400 text-sm">
-            {roundsCleared}/3 rounds cleared · {drive.source === 'resume' ? 'Resume-based' : `Role: ${drive.role}`}
+            {roundsCleared}/4 rounds cleared · {drive.source === 'resume' ? 'Resume-based' : `Role: ${drive.role}`}
           </p>
         </div>
 
         <div className="space-y-4 mb-8">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <BrainCircuit className="h-6 w-6 text-amber-400 shrink-0" />
+              <div>
+                <p className="font-semibold text-white">Aptitude Round</p>
+                <p className="text-xs text-slate-400">
+                  {aptitude.score != null ? `Score: ${aptitude.score}%` : 'Not attempted'}
+                </p>
+              </div>
+            </div>
+            {aptitude.passed ? (
+              <CheckCircle2 className="h-5 w-5 text-green-400 shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 text-slate-600 shrink-0" />
+            )}
+          </div>
+
           <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-6 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <ListChecks className="h-6 w-6 text-blue-400 shrink-0" />

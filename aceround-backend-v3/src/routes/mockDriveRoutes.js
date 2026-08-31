@@ -4,6 +4,8 @@ const {
   startMockDrive,
   getMockDrive,
   listMockDrives,
+  startAptitude,
+  submitAptitude,
   startMcq,
   submitMcq,
   getCodingProblems,
@@ -22,6 +24,8 @@ router.use(protect);
 router.get("/", listMockDrives);
 router.post("/start", startMockDrive);
 router.get("/:id", getMockDrive);
+router.post("/:id/aptitude/start", startAptitude);
+router.post("/:id/aptitude/submit", submitAptitude);
 router.post("/:id/mcq/start", startMcq);
 router.post("/:id/mcq/submit", submitMcq);
 router.get("/:id/coding", getCodingProblems);
