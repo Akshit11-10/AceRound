@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import AppNavbar from '../components/AppNavbar';
 import Footer from '../components/Footer';
 import { mockDriveApi } from '../services/mockDriveApi';
@@ -12,6 +12,7 @@ import { Loader2, Mic, MicOff, Send, Clock, Volume2, CheckCircle2 } from 'lucide
 // recognition (e.g. Firefox, Safari on some versions).
 const MockDriveInterview = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [transcript, setTranscript] = useState([]);
@@ -27,6 +28,7 @@ const MockDriveInterview = () => {
   const timerRef = useRef(null);
   const recognitionRef = useRef(null);
   const transcriptEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const finishedRef = useRef(false);
 
   useEffect(() => {
@@ -112,7 +114,10 @@ const MockDriveInterview = () => {
   }, [id]);
 
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [transcript]);
 
   const handleFinish = useCallback(async () => {
@@ -228,13 +233,24 @@ const MockDriveInterview = () => {
             <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-4" />
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">Interview Complete!</h2>
             <p className="text-3xl font-bold text-blue-400 mb-4">{interviewResult?.score ?? '-'}/100</p>
-            <p className="text-slate-300 text-sm leading-relaxed max-w-lg mx-auto">
+            <p className="text-slate-300 text-sm leading-relaxed max-w-lg mx-auto mb-6">
               {interviewResult?.feedback}
             </p>
+            <button
+              type="button"
+              onClick={() => navigate(`/mock-drive/${id}/report`)}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded-xl transition text-sm"
+            >
+              View Full Report
+            </button>
           </div>
         ) : (
           <>
-            <div className="flex-1 space-y-4 mb-4">
+            <div
+              ref={messagesContainerRef}
+              className="space-y-4 mb-4 overflow-y-auto"
+              style={{ maxHeight: 'calc(100vh - 320px)' }}
+            >
               {transcript.map((t, i) => (
                 <div key={i} className={`flex ${t.role === 'ai' ? 'justify-start' : 'justify-end'}`}>
                   <div

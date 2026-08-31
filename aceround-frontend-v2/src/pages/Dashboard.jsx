@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Play, Clock, Target, TrendingUp, Award, Calendar,
   ChevronRight, Code, Server, Layers, Atom, User, Lightbulb,LogOut, Menu, X, Brain,
-  Briefcase, Sparkles, FileSearch
+  Briefcase, Sparkles, FileSearch, FileClock
 } from 'lucide-react';
 import {
   LineChart, Line, PieChart as RePieChart, Pie, Cell,
@@ -14,6 +14,7 @@ import Footer from '../components/Footer';
 import AppNavbar from '../components/AppNavbar';
 import { useAuth } from '../hooks/useAuth';
 import { interviewApi } from '../services/interviewApi';
+import { mockDriveApi } from '../services/mockDriveApi';
 
 const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#22c55e', '#f97316', '#ef4444', '#ec4897', '#06b6d4', '#eab308'];
 
@@ -55,12 +56,34 @@ const Dashboard = () => {
 
   const [interviewHistory, setInterviewHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [driveHistory, setDriveHistory] = useState([]);
+  const [loadingDrives, setLoadingDrives] = useState(true);
   const [stats, setStats] = useState({
     totalInterviews: 0,
     avgScore: 0,
     bestScore: 0,
     totalTime: 0,
   });
+
+  // Load this user's Mock Drive history, independent of the existing
+  // interview history logic below.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await mockDriveApi.list();
+        if (!cancelled) setDriveHistory(data.drives || []);
+      } catch (err) {
+        console.error('Failed to load mock drive history:', err);
+      } finally {
+        if (!cancelled) setLoadingDrives(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Load this user's interview results from the backend (MongoDB), not localStorage.
   useEffect(() => {
@@ -238,6 +261,50 @@ const Dashboard = () => {
               Check now <ChevronRight className="h-4 w-4" />
             </span>
           </Link>
+        </div>
+
+        {/* Mock Drive history */}
+        <div className="mb-10 animate-fadeInUp">
+          <h2 className="text-sm font-semibold text-slate-400 mb-3 uppercase tracking-wide">
+            Drive History
+          </h2>
+          {loadingDrives ? (
+            <p className="text-slate-500 text-sm">Loading...</p>
+          ) : driveHistory.length === 0 ? (
+            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 text-sm text-slate-400">
+              No mock drives yet — start one above to see your history here.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {driveHistory.slice(0, 5).map((drive) => {
+                const label = drive.source === 'resume' ? 'Resume-based' : drive.role;
+                const stageLabel =
+                  drive.currentStage === 'completed'
+                    ? 'Completed'
+                    : `In progress — ${drive.currentStage} round`;
+                return (
+                  <Link
+                    key={drive.id}
+                    to={
+                      drive.currentStage === 'completed'
+                        ? `/mock-drive/${drive.id}/report`
+                        : `/mock-drive/${drive.id}/${drive.currentStage}`
+                    }
+                    className="flex items-center justify-between bg-slate-900/60 border border-slate-800 hover:border-blue-500/40 rounded-xl px-4 py-3 transition"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileClock className="h-5 w-5 text-slate-500 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-white">{label}</p>
+                        <p className="text-xs text-slate-500">{stageLabel}</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-500 shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Stats row */}

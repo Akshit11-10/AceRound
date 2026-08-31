@@ -5,6 +5,7 @@ const { generateQuestions } = require("../services/aiQuestionService");
 const {
   getDsaProblems,
   getDsaProblemById,
+  pickRandomProblemIds,
   CODING_PASS_COUNT,
   SECONDS_PER_PROBLEM,
 } = require("../data/dsaProblems");
@@ -185,9 +186,10 @@ const submitMcq = asyncHandler(async (req, res) => {
 });
 
 // @route GET /api/mock-drive/:id/coding
-// Returns the fixed DSA problem bank (no hidden test cases leaked), the
-// user's existing per-problem progress (so a page refresh doesn't lose
-// solved badges), and how long the whole round should be timed for.
+// Randomly picks (once per drive, persisted) a fixed-size subset of basic
+// DSA problems from the larger pool, so each new drive gets a different
+// mix. Returns the user's existing per-problem progress (so a page refresh
+// doesn't lose solved badges), and how long the whole round should be timed for.
 const getCodingProblems = asyncHandler(async (req, res) => {
   const drive = await MockDrive.findOne({ _id: req.params.id, user: req.user._id });
   if (!drive) {
@@ -197,16 +199,24 @@ const getCodingProblems = asyncHandler(async (req, res) => {
     throw new ApiError(400, `Coding round is not active for this drive (current stage: ${drive.currentStage}).`);
   }
 
-  const problems = getDsaProblems().map((p) => ({
-    id: p.id,
-    title: p.title,
-    description: p.description,
-    starterCode: p.starterCode,
-    examples: p.testCases.map((tc) => ({
-      input: JSON.stringify(tc.args[0]),
-      output: typeof tc.expected === "boolean" ? (tc.expected ? "true" : "false") : String(tc.expected),
-    })),
-  }));
+  if (!drive.codingProblemIds || drive.codingProblemIds.length === 0) {
+    drive.codingProblemIds = pickRandomProblemIds();
+    await drive.save();
+  }
+
+  const problems = drive.codingProblemIds
+    .map((id) => getDsaProblemById(id))
+    .filter(Boolean)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      starterCode: p.starterCode,
+      examples: p.testCases.map((tc) => ({
+        input: JSON.stringify(tc.args[0]),
+        output: typeof tc.expected === "boolean" ? (tc.expected ? "true" : "false") : String(tc.expected),
+      })),
+    }));
 
   res.json({
     success: true,
@@ -263,6 +273,9 @@ const submitCoding = asyncHandler(async (req, res) => {
   }
 
   const { problemId, language, sourceCode } = req.body;
+  if (!drive.codingProblemIds.includes(problemId)) {
+    throw new ApiError(400, "This problem is not part of this drive's coding round.");
+  }
   const problem = getDsaProblemById(problemId);
   if (!problem) throw new ApiError(400, "Unknown problem.");
   if (!sourceCode || !sourceCode.trim()) throw new ApiError(400, "No code submitted.");
@@ -278,7 +291,7 @@ const submitCoding = asyncHandler(async (req, res) => {
   progress[problemId] = { solved: grading.passed, submittedAt: new Date() };
   drive.codingProgress = progress;
 
-  const totalCount = getDsaProblems().length;
+  const totalCount = drive.codingProblemIds.length;
   const solvedCount = Object.values(progress).filter((p) => p.solved).length;
   const passed = solvedCount >= CODING_PASS_COUNT;
 
